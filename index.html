@@ -1,0 +1,155 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Angel Warrior Press Kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&display=swap">
+<style>
+  /* One world, deliberately dark: the game lives in the abyss, and the page sits in it too. */
+  :root{
+    color-scheme: dark;
+    --ground:#0B090F; --panel:#15111B; --rule:#2A2433; --ink:#EDE6DA; --muted:#A79FB2;
+    --gold:#E8B44C; --gold-soft:#F2DFA6; --ember:#C8401E;
+    --display:'Cinzel', 'Trajan Pro', Georgia, serif; --body:'Literata', Georgia, 'Times New Roman', serif;
+  }
+  body{ background:var(--ground); color:var(--ink); font-family:var(--body); font-size:17px; line-height:1.65; margin:0; padding-inline:20px; padding-block:0 72px; }
+  a{ color:var(--gold); }
+  a:focus-visible, button:focus-visible{ outline:2px solid var(--gold); outline-offset:3px; }
+  .wrap{ max-width:64rem; margin:0 auto; display:flex; flex-direction:column; gap:64px; }
+
+  /* hero: the trailer beside the name */
+  .hero{ display:grid; grid-template-columns: minmax(0,1fr) minmax(0,300px); gap:40px; align-items:center; padding-top:48px; }
+  .hero-text{ display:flex; flex-direction:column; gap:18px; }
+  .logo{ width:min(360px, 80%); height:auto; mix-blend-mode:screen; }
+  .tag{ font-family:var(--display); font-weight:700; font-size:clamp(22px, 3.4vw, 30px); letter-spacing:.06em; color:var(--gold-soft); margin:0; text-wrap:balance; }
+  .lede{ margin:0; max-width:34rem; color:var(--ink); }
+  .nowrap{ white-space:nowrap; }
+  .facts-inline{ display:flex; flex-wrap:wrap; gap:8px; margin:0; padding:0; list-style:none; }
+  .facts-inline li{ font-family:var(--display); font-weight:600; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--gold); border:1px solid var(--rule); border-radius:999px; padding:6px 12px; }
+  video{ width:100%; height:auto; border-radius:22px; background:#000; display:block; box-shadow:0 0 60px rgba(200,64,30,.18); }
+
+  section{ display:flex; flex-direction:column; gap:20px; }
+  h2{ font-family:var(--display); font-weight:700; font-size:22px; letter-spacing:.08em; text-transform:uppercase; color:var(--gold); margin:0; }
+  p{ margin:0; max-width:65ch; }
+  .note{ color:var(--muted); font-size:15px; }
+
+  .two{ display:grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap:32px; }
+  .copyblock{ background:var(--panel); border:1px solid var(--rule); border-radius:10px; padding:20px 22px; display:flex; flex-direction:column; gap:12px; }
+  .copyblock h3{ font-family:var(--display); font-weight:600; font-size:14px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:0; }
+  .copyblock p{ user-select:text; }
+  .copy-btn{ align-self:flex-start; font-family:var(--display); font-weight:600; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--ground); background:var(--gold); border:0; border-radius:6px; padding:8px 14px; cursor:pointer; }
+
+  dl.facts{ display:grid; grid-template-columns: max-content 1fr; gap:10px 28px; margin:0; font-variant-numeric: tabular-nums; }
+  dl.facts dt{ font-family:var(--display); font-weight:600; font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); padding-top:3px; }
+  dl.facts dd{ margin:0; }
+
+  ul.features{ margin:0; padding-left:1.2em; display:flex; flex-direction:column; gap:8px; max-width:65ch; }
+
+  .gallery{ display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:14px; }
+  .gallery img{ width:100%; height:auto; border-radius:14px; display:block; border:1px solid var(--rule); }
+
+  .contact{ font-family:var(--display); font-weight:700; font-size:20px; letter-spacing:.04em; color:var(--gold-soft); user-select:all; word-break:break-all; }
+  footer{ border-top:1px solid var(--rule); padding-top:20px; color:var(--muted); font-size:14px; display:flex; flex-wrap:wrap; gap:8px 24px; justify-content:space-between; }
+
+  @media (max-width: 720px){
+    .hero{ grid-template-columns: 1fr; gap:28px; padding-top:32px; }
+    .tag{ font-size:min(4.8vw, 24px); }
+    .hero video{ max-width:320px; margin:0 auto; }
+    dl.facts{ grid-template-columns: 1fr; gap:2px; }
+    dl.facts dd{ margin-bottom:10px; }
+  }
+  @media (prefers-reduced-motion: reduce){ video{ box-shadow:none; } }
+</style>
+
+<main class="wrap">
+  <header class="hero">
+    <div class="hero-text">
+      <img class="logo" src="logo.jpg" alt="Angel Warrior">
+      <p class="tag">One tap. One sword.<br><span class="nowrap">One angel against the dark.</span></p>
+      <p class="lede">A hand-painted, one-tap flying game for iPhone and iPad. Guide the archangel down through six realms of the abyss, cut down demons, rescue kneeling souls, and face the Final Demon at the bottom.</p>
+      <ul class="facts-inline">
+        <li>iPhone &amp; iPad</li><li>Free</li><li>Out Nov 1, 2026</li>
+      </ul>
+    </div>
+    <video src="trailer.mp4" poster="poster.jpg" controls playsinline muted loop preload="metadata" aria-label="Angel Warrior gameplay trailer, 21 seconds"></video>
+  </header>
+
+  <section>
+    <h2>Fact sheet</h2>
+    <dl class="facts">
+      <dt>Title</dt><dd>Angel Warrior</dd>
+      <dt>Developer</dt><dd>Jerry Ching (independent, one person)</dd>
+      <dt>Release</dt><dd>November 1, 2026 (All Saints' Day). Pre-order on the App Store.</dd>
+      <dt>Platforms</dt><dd>iPhone and iPad</dd>
+      <dt>Price</dt><dd>Free. No ads, no in-app purchases and no data collected in version 1.0.</dd>
+      <dt>Genre</dt><dd>Arcade / Action</dd>
+      <dt>Age rating</dt><dd>13+ (fantasy violence)</dd>
+      <dt>App Store</dt><dd>Link coming when the pre-order opens</dd>
+      <dt>Early access</dt><dd>TestFlight beta available to press and creators. Email for a link.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>About the game</h2>
+    <div class="two">
+      <div class="copyblock">
+        <h3>Short description</h3>
+        <p id="short">Angel Warrior is a hand-painted, one-tap flying game. Descend six realms of the abyss as the archangel, cut down demons, rescue lost souls, and face the Final Demon.</p>
+        <button class="copy-btn" type="button" data-copy="short">Copy</button>
+      </div>
+      <div class="copyblock">
+        <h3>Long description</h3>
+        <p id="long">Fly down through six realms of the abyss: fire, ash, brimstone, the hive, the drowned swamp and the frozen pit. Every tap lifts your wings, and every pass of your blade can cut a demon from the sky. Rescue the kneeling souls to restore your strength, slip through columns of stone, rust, honey, rotten wood and ice, and reach the Final Demon, a beast made of everything you've fought. Defeat it and the captive souls rise free. Angel Warrior was painted, scored and built by one developer.</p>
+        <button class="copy-btn" type="button" data-copy="long">Copy</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Features</h2>
+    <ul class="features">
+      <li>Simple one-tap controls that take practice to master</li>
+      <li>Six hand-painted realms, each with its own creatures and obstacles</li>
+      <li>Sword combat and soul rescues, with a strength bar instead of instant death from demons</li>
+      <li>A full boss fight against the Final Demon</li>
+      <li>Original orchestral soundtrack</li>
+      <li>Normal and Fast modes</li>
+      <li>No account, no ads and no data collection in version 1.0</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Screenshots</h2>
+    <p class="note">Press and hold (or right-click) any image to save it. Full-size originals available on request.</p>
+    <div class="gallery">
+      <img src="shot1.jpg" alt="Title screen with the Angel Warrior logo over flames" loading="lazy">
+      <img src="shot2.jpg" alt="The angel fighting a demon between stone columns" loading="lazy">
+      <img src="shot3.jpg" alt="The angel rescuing a soul in the hive" loading="lazy">
+      <img src="shot4.jpg" alt="The angel facing a fish demon in the brimstone" loading="lazy">
+      <img src="shot5.jpg" alt="The drowned swamp with a demon and a kneeling soul" loading="lazy">
+      <img src="shot6.jpg" alt="The angel striking the Final Demon above a row of souls" loading="lazy">
+    </div>
+  </section>
+
+  <section>
+    <h2>Contact</h2>
+    <p>For review copies, early access, interviews or artwork:</p>
+    <p class="contact">angelwarriorapp@gmail.com</p>
+  </section>
+
+  <footer>
+    <span>© 2026 Jerry Ching. Angel Warrior is an independent game.</span>
+    <span><a href="support.html">Support</a> · <a href="privacy.html">Privacy</a></span>
+    <a href="church/">For churches and youth groups</a>
+  </footer>
+</main>
+
+<script>
+  document.querySelectorAll('.copy-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var el = document.getElementById(btn.dataset.copy);
+      var text = el.textContent;
+      function done(){ btn.textContent = 'Copied'; setTimeout(function(){ btn.textContent = 'Copy'; }, 1600); }
+      function fallback(){ var r = document.createRange(); r.selectNodeContents(el); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = 'Selected'; setTimeout(function(){ btn.textContent = 'Copy'; }, 1600); }
+      try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+    });
+  });
+</script>

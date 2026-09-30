@@ -1,0 +1,135 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Church Partner Agreement</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&display=swap">
+<style>
+  /* a document to read: plain, quiet, in the game's type */
+  :root{
+    --ground:#F6F4F1; --paper:#FFFFFF; --ink:#1D1A22; --muted:#5F5968; --rule:#E3DFE6; --gold:#8A6116; --warn-bg:#FBF3E2; --warn-rule:#D9B866;
+    --display:'Cinzel', 'Trajan Pro', Georgia, serif; --body:'Literata', Georgia, 'Times New Roman', serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){ --ground:#0E0C12; --paper:#15111B; --ink:#EDE8F2; --muted:#A39EAD; --rule:#2A2433; --gold:#E8B44C; --warn-bg:#241C10; --warn-rule:#7A6128; color-scheme:dark; }
+  }
+  :root[data-theme="dark"]{ --ground:#0E0C12; --paper:#15111B; --ink:#EDE8F2; --muted:#A39EAD; --rule:#2A2433; --gold:#E8B44C; --warn-bg:#241C10; --warn-rule:#7A6128; color-scheme:dark; }
+
+  body{ background:var(--ground); color:var(--ink); font-family:var(--body); font-size:16.5px; line-height:1.7; margin:0; padding-inline:18px; padding-block:40px 72px; }
+  .doc{ max-width:44rem; margin:0 auto; background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding-inline:clamp(18px, 5vw, 56px); padding-block:44px 52px; display:flex; flex-direction:column; gap:26px; }
+  .sample{ background:var(--warn-bg); border:1px solid var(--warn-rule); border-radius:6px; padding:14px 16px; font-size:15px; }
+  .sample strong{ font-family:var(--display); letter-spacing:.08em; }
+  header{ display:flex; flex-direction:column; gap:6px; }
+  .eyebrow{ font-family:var(--display); font-weight:600; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); }
+  h1{ font-family:var(--display); font-weight:700; font-size:clamp(24px, 4vw, 32px); line-height:1.2; margin:0; text-wrap:balance; }
+  .meta{ color:var(--muted); font-size:14.5px; margin:0; }
+  section{ display:flex; flex-direction:column; gap:10px; }
+  h2{ font-family:var(--display); font-weight:600; font-size:15.5px; letter-spacing:.06em; margin:0; }
+  p{ margin:0; }
+  ol, ul{ margin:0; padding-left:1.3em; display:flex; flex-direction:column; gap:6px; }
+  .blank{ display:inline-block; min-width:12ch; border-bottom:1px solid var(--muted); }
+  .sign{ display:grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap:28px; padding-top:8px; }
+  .sign div{ display:flex; flex-direction:column; gap:22px; }
+  .line{ border-bottom:1px solid var(--muted); height:26px; }
+  .label{ font-size:13.5px; color:var(--muted); }
+  a{ color:var(--gold); }
+</style>
+
+<main class="doc">
+  <p class="sample"><strong>SAMPLE — NOT FINAL.</strong> This is a draft for discussion so churches can see the terms we intend to offer. It is not legal advice and is not yet an offer. The final agreement will be reviewed by an attorney and may change.</p>
+
+  <header>
+    <span class="eyebrow">Angel Warrior</span>
+    <h1>Church Partner Agreement</h1>
+    <p class="meta">Between Jerry Ching, developer of Angel Warrior ("Developer"), and <span class="blank"></span> ("Church").</p>
+  </header>
+
+  <section>
+    <h2>1. Purpose</h2>
+    <p>The Church may share Angel Warrior with its members. In return, the Developer pays the Church a share of the ad revenue earned from those members' play and an equal share of a partner fund, as set out below.</p>
+  </section>
+
+  <section>
+    <h2>2. Church link and Church Players</h2>
+    <ol>
+      <li>Before the Church joins, the Developer confirms it is a real, active church (for example by its address, website or a pastor's contact). The Developer then gives the Church a unique link, QR code and church code.</li>
+      <li>A player becomes a "Church Player" by opening the game through the Church's link or by entering the Church's code in the game. The game stores only the Church's code on the player's device. No names, emails or other personal details are collected or shared.</li>
+      <li><strong>Fallback.</strong> Some players install through the Church's link but never open it in the game or enter the code. For those players, the Developer uses Apple's own campaign report, which counts downloads made through the Church's link, and credits the Church with the same share of the remaining unassigned player revenue as the Church's share of those reported downloads. Apple's report includes only players who chose to share analytics with developers, so this count may be lower than the true number.</li>
+      <li>A player belongs to one church at a time. If a player enters a different church's code, the player's future play counts for that church.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>3. Revenue share</h2>
+    <ol>
+      <li>The Developer pays the Church <strong>100% of Net Ad Revenue</strong> from Church Players.</li>
+      <li>"Net Ad Revenue" means the money the Developer actually receives from ad networks for ads shown to Church Players, after the ad networks' own fees and after any deductions, refunds or adjustments they make.</li>
+      <li><strong>Partner Fund.</strong> Each quarter the Developer places <strong>75% of the Net Ad Revenue from all players who are not Church Players of any partner church</strong> into a Partner Fund, divided <strong>equally</strong> among all Qualifying Churches for that quarter.</li>
+      <li>A "Qualifying Church" is a partner church with at least 25 Church Players who played during that quarter.</li>
+      <li>Both shares begin with the first version of Angel Warrior that shows ads. Earlier versions contain no ads and earn no revenue.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>4. Payments</h2>
+    <ol>
+      <li>Payments are made quarterly, within 45 days after the end of each quarter, by check or bank transfer.</li>
+      <li>The minimum payment is $25. A smaller balance rolls over to the next quarter and is never lost.</li>
+      <li>Each payment includes a statement with the ad report figures used to calculate it.</li>
+      <li>If an ad network later reduces revenue for a quarter already paid (for example, for invalid activity), the Developer may deduct that amount from future payments.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>5. Founding partner rate and changes</h2>
+    <ol>
+      <li>The 100% member share and the 75% Partner Fund are guaranteed for 12 months from the date the first version with ads is released (the "Founding Partner Rates").</li>
+      <li>After that, the Developer may change either percentage with at least 60 days' written notice. Any change applies only to revenue earned after the change takes effect, never to revenue already earned.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>6. Promoting the game</h2>
+    <ol>
+      <li>The Church may promote Angel Warrior freely: announcements, bulletins, slides, social posts and friendly competitions.</li>
+      <li>The Church will <strong>not</strong> ask, encourage or reward anyone to view or click ads, and will not use extra devices, emulators, scripts, paid players or any other artificial means to generate plays or ad views. Ad networks prohibit this, and it can close the ad account for every partner church.</li>
+      <li>If the Church breaks this section, the Developer may end this agreement immediately, withhold any revenue connected to the prohibited activity, and remove the Church from the Partner Fund.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>7. Age and privacy</h2>
+    <p>Angel Warrior is rated 13+ on the App Store. The Church will not direct its promotion at children under 13. Player privacy is handled under the Angel Warrior <a href="../privacy.html">privacy policy</a>.</p>
+  </section>
+
+  <section>
+    <h2>8. No guaranteed earnings</h2>
+    <p>Ad revenue depends on how many Church Players play and on ad rates, which change. The Developer does not guarantee any amount of revenue.</p>
+  </section>
+
+  <section>
+    <h2>9. Names and logos</h2>
+    <p>The Developer may list the Church as a partner by name. The Church may use the Angel Warrior name, logo and screenshots to promote the game.</p>
+  </section>
+
+  <section>
+    <h2>10. Ending the agreement</h2>
+    <p>Either party may end this agreement with 30 days' written notice (email is enough). Any balance earned before the end date is paid with the next quarterly payment, even if it is under $25.</p>
+  </section>
+
+  <section>
+    <h2>11. General</h2>
+    <ul>
+      <li>The parties are independent. This agreement does not create a partnership, employment or agency relationship.</li>
+      <li>Payments are a revenue share for promotion, not a donation. Each party is responsible for its own taxes and records. The Developer may ask for a W-9.</li>
+      <li>Neither party is liable to the other for indirect or consequential losses. The Developer's total liability is limited to the amounts owed under section 3.</li>
+      <li>This agreement is governed by the laws of the State of California.</li>
+      <li>This is the entire agreement. Changes must be in writing, except rate changes made under section 5.</li>
+    </ul>
+  </section>
+
+  <section class="sign">
+    <div><div class="line"></div><span class="label">Developer: Jerry Ching</span><div class="line"></div><span class="label">Date</span></div>
+    <div><div class="line"></div><span class="label">For the Church: name and title</span><div class="line"></div><span class="label">Date</span></div>
+  </section>
+
+  <p class="meta">Questions: angelwarriorapp@gmail.com</p>
+</main>
