@@ -43,6 +43,8 @@
 
   ul.features{ margin:0; padding-left:1.2em; display:flex; flex-direction:column; gap:8px; max-width:65ch; }
 
+  .downloads{ display:flex; flex-wrap:wrap; gap:12px; }
+  .downloads .copy-btn{ text-decoration:none; display:inline-block; }
   .gallery{ display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:14px; }
   .gallery img{ width:100%; height:auto; border-radius:14px; display:block; border:1px solid var(--rule); }
 
@@ -120,7 +122,12 @@
 
   <section>
     <h2>Screenshots</h2>
-    <p class="note">Press and hold (or right-click) any image to save it. Full-size originals available on request.</p>
+    <p class="note">Press and hold (or right-click) any image to save it.</p>
+    <div class="downloads">
+      <a class="copy-btn" href="press/angel_warrior_press_images.zip" download>Download press assets (15 MB)</a>
+      <a class="copy-btn" href="press/angel_warrior_trailer_1080x1920.mp4" download>Download trailer, 1080×1920 (31 MB)</a>
+    </div>
+    <p class="note">Press assets: 16:9 key art and painting, each with and without the logo; the logo on a transparent background; the app icon; six screenshots.</p>
     <div class="gallery">
       <img src="shot1.jpg" alt="Title screen with the Angel Warrior logo over flames" loading="lazy">
       <img src="shot2.jpg" alt="The angel fighting a demon between stone columns" loading="lazy">
