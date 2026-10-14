@@ -28,7 +28,7 @@
 <video id="fireA" muted playsinline preload="auto" style="position:fixed;left:0;top:0;width:4px;height:4px;opacity:.03;pointer-events:none;z-index:0"></video>
 <video id="fireB" muted playsinline preload="auto" style="position:fixed;left:0;top:0;width:4px;height:4px;opacity:.03;pointer-events:none;z-index:0"></video>
 
-<script>window.AW_DEMO = true; window.AW_DEMO_STORE = false;   // set AW_DEMO_STORE to true once the App Store page is live</script>
+<script>window.AW_DEMO = true; window.AW_DEMO_STORE = true; window.AW_DEMO_LABEL = "PRE-ORDER NOW"; window.AW_DEMO_SUB = "FREE ON THE APP STORE · NOVEMBER 1";   // after Nov 1: label "GET THE FULL GAME", sub "FREE ON THE APP STORE"</script>
 <script>
 const W = 480, H = 800;
 if (window.NATIVE_APP) console.log("boot: script running");
@@ -683,7 +683,7 @@ if (!window.NATIVE_APP && /[?&]native/.test(location.search)){ window.NATIVE_APP
   window.webkit = { messageHandlers: { audio: { postMessage: m => console.log("audio", JSON.stringify(m)) } } }; }
 const NATIVE = !!(window.NATIVE_APP && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.audio);
 const DEMO = !!window.AW_DEMO || /[?&]demo/.test(location.search);   // the web demo (angelwarriorgame.com/play): the first two realms, then an invitation to the full game
-const DEMO_URL = "https://angelwarriorgame.com/ios", DEMO_BTN = { y: 560, w: 300, h: 54 }, DEMO_STORE = !!window.AW_DEMO_STORE;   // the store button appears once the App Store page is live (AW_DEMO_STORE = true)
+const DEMO_URL = "https://angelwarriorgame.com/ios", DEMO_BTN = { y: 560, w: 300, h: 54 }, DEMO_STORE = !!window.AW_DEMO_STORE, DEMO_LABEL = window.AW_DEMO_LABEL || "GET THE FULL GAME", DEMO_SUB = window.AW_DEMO_SUB || "FREE ON THE APP STORE";   // the store button appears once the App Store page is live (AW_DEMO_STORE = true)
 const RELEASE = DEMO || !!window.NATIVE_RELEASE || /[?&]release/.test(location.search);   // (?release on the web: preview the shipped layout)                                   // the shipped app: no level picker, no testing rows
 if (NATIVE) window.onerror = (msg, src, line) => { try { window.webkit.messageHandlers.audio.postMessage({ cmd:"log", key:"error", name: msg + " @" + line }); } catch(e){} };
 function na(msg){ try { window.webkit.messageHandlers.audio.postMessage(msg); } catch(e){} }
@@ -1621,8 +1621,8 @@ function frameBody(ms){
     for (const [t, y] of [["FOUR MORE REALMS", 462], ["AND THE FINAL DEMON AWAIT", 486]]){ g.strokeText(t, W/2, y); g.fillText(t, W/2, y); }
     if (DEMO_STORE){ const bx = W/2 - DEMO_BTN.w/2, by = DEMO_BTN.y - DEMO_BTN.h/2;
       g.fillStyle = "#E8B44C"; g.beginPath(); if (g.roundRect) g.roundRect(bx, by, DEMO_BTN.w, DEMO_BTN.h, 10); else g.rect(bx, by, DEMO_BTN.w, DEMO_BTN.h); g.fill();
-      g.fillStyle = "#1A1208"; g.font = "700 19px Cinzel, Georgia, serif"; g.fillText("GET THE FULL GAME", W/2, DEMO_BTN.y + 7);
-      g.fillStyle = "#C9B58A"; g.font = "600 14px Cinzel, Georgia, serif"; g.strokeText("FREE ON THE APP STORE", W/2, DEMO_BTN.y + 52); g.fillText("FREE ON THE APP STORE", W/2, DEMO_BTN.y + 52); }
+      g.fillStyle = "#1A1208"; g.font = "700 19px Cinzel, Georgia, serif"; g.fillText(DEMO_LABEL, W/2, DEMO_BTN.y + 7);
+      g.fillStyle = "#C9B58A"; g.font = "600 14px Cinzel, Georgia, serif"; g.strokeText(DEMO_SUB, W/2, DEMO_BTN.y + 52); g.fillText(DEMO_SUB, W/2, DEMO_BTN.y + 52); }
     else { g.fillStyle = "#F2DFA6"; g.font = "600 18px Cinzel, Georgia, serif";
       for (const [t, y] of [["COMING TO THE APP STORE", 556], ["NOVEMBER 1", 582]]){ g.strokeText(t, W/2, y); g.fillText(t, W/2, y); } }
     if (now - demoAt > 2.5){ g.globalAlpha = Math.min(1, (now - demoAt - 2.5)/0.5) * (0.75 + 0.25*Math.sin(now*3)); g.fillStyle = "#F2DFA6"; g.font = "600 20px Cinzel, Georgia, serif";
