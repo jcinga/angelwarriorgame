@@ -47,17 +47,17 @@
     <p class="city" id="city"></p>
   </header>
 
+  <section class="pick">
+    <label for="sel">Your church</label>
+    <select id="sel"></select>
+  </section>
+
   <section class="card" aria-live="polite">
     <div class="big"><span class="num" id="num">–</span><span class="of">of 25</span></div>
     <p class="label" id="label">active players this quarter</p>
     <div class="marks" id="marks" aria-hidden="true"></div>
     <span class="chip wait" id="chip">Counting starts with the November update</span>
     <p class="fine" id="fine">An active player picked your church in the game and played on at least six different days this quarter. Each player counts once, for the church they picked last. Players are never named; we only see a count.</p>
-  </section>
-
-  <section class="pick">
-    <label for="sel">Another church</label>
-    <select id="sel"></select>
   </section>
 
   <p><a href="../">How the partner program works</a> · <a href="../terms.html">Program terms</a></p>
@@ -89,6 +89,7 @@ function show(c, active){
   $("label").textContent = "active players in " + q.label + " (the quarter ends " + q.end + ")";
   marks(active || 0);
   const chip = $("chip");
+  if (!c){ $("num").textContent = "–"; chip.className = "chip wait"; chip.textContent = "Choose your church above"; return; }
   if (active == null){ $("num").textContent = "–"; chip.className = "chip wait"; chip.textContent = COUNT_URL ? "Count unavailable right now. Try again in a minute." : "Counting starts with the November update"; return; }
   $("num").textContent = active;
   if (active >= GOAL){ chip.className = "chip"; chip.textContent = "Qualifies for this quarter's fund"; }
@@ -98,11 +99,11 @@ function show(c, active){
 async function load(){
   let list = [];
   try { list = ((await (await fetch("../../churches.json", { cache: "no-store" })).json()).churches || []).filter(c => !c.test); } catch(e){}
-  const id = qs.get("c") || (list[0] && list[0].id) || "";
+  const id = qs.get("c") || "";
   const c = list.find(x => x.id === id);
   const sel = $("sel");
-  sel.innerHTML = list.map(x => `<option value="${x.id}"${x.id === id ? " selected" : ""}>${x.name}, ${x.city}</option>`).join("");
-  sel.onchange = () => { location.search = "?c=" + encodeURIComponent(sel.value); };
+  sel.innerHTML = (c ? "" : `<option value="" selected disabled>Choose your church</option>`) + list.map(x => `<option value="${x.id}"${x.id === id ? " selected" : ""}>${x.name}, ${x.city}</option>`).join("");
+  sel.onchange = () => { if (sel.value) location.search = "?c=" + encodeURIComponent(sel.value); };   // the link then names the church, so a church can bookmark it
   show(c, null);
   if (!COUNT_URL || !c) return;
   try {
