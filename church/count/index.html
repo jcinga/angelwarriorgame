@@ -37,6 +37,27 @@
   .pick label{ font-family:var(--display); font-weight:600; font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
   .pick select{ font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--rule); border-radius:8px; padding:10px 12px; }
   .pick select:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+  /* the pie: qualifying churches' shares, yours in gold; the ranking: every partner church against the 25 line */
+  .board{ display:flex; flex-direction:column; gap:18px; }
+  h2{ font-family:var(--display); font-weight:700; font-size:19px; letter-spacing:.08em; text-transform:uppercase; color:var(--gold); margin:0; text-wrap:balance; }
+  .pie-wrap{ position:relative; width:min(260px, 80vw); aspect-ratio:1; margin:4px auto; }
+  .pie-wrap svg{ width:100%; height:100%; display:block; }
+  .pie-wrap path, .pie-wrap circle{ cursor:default; }
+  .pie-mid{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 22%; pointer-events:none; }
+  .pie-mid b{ font-family:var(--display); font-weight:700; font-size:34px; line-height:1.1; color:var(--gold-soft); font-variant-numeric:tabular-nums; }
+  .pie-mid small{ color:var(--muted); font-size:13px; line-height:1.35; }
+  ol.rank{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+  ol.rank li{ display:grid; grid-template-columns:2ch minmax(0,1fr) auto; gap:4px 12px; align-items:baseline; padding:12px 14px; border:1px solid var(--rule); border-radius:10px; }
+  ol.rank li.me{ border-color:var(--gold); background:var(--panel); }
+  .rk{ font-family:var(--display); font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .nm{ min-width:0; }
+  .nm span{ display:block; color:var(--muted); font-size:14px; }
+  .ct{ font-family:var(--display); font-weight:700; font-size:20px; color:var(--ink); font-variant-numeric:tabular-nums; text-align:right; }
+  .ct small{ display:block; font-family:var(--body); font-weight:400; font-size:13px; color:var(--muted); }
+  .track{ grid-column:2 / 4; position:relative; height:8px; border-radius:4px; background:var(--dim); }
+  .track i{ position:absolute; left:0; top:0; bottom:0; border-radius:4px; background:var(--muted); }
+  li.me .track i{ background:var(--gold); }
+  .track em{ position:absolute; top:-4px; bottom:-4px; width:2px; background:var(--gold-soft); }
   footer{ border-top:1px solid var(--rule); padding-top:20px; color:var(--muted); font-size:14px; }
 </style>
 
@@ -58,6 +79,16 @@
     <div class="marks" id="marks" aria-hidden="true"></div>
     <span class="chip wait" id="chip">Counting starts with the November update</span>
     <p class="fine" id="fine">An active player picked your church in the game and played on at least six different days this quarter. Each player counts once, for the church they picked last. Players are never named; we only see a count.</p>
+  </section>
+
+  <section class="board" aria-live="polite">
+    <h2>This quarter's pie</h2>
+    <p class="fine">Only churches with 25 or more active players share the fund. Each slice is a church's share of all those players, so its share of the money.</p>
+    <div class="pie-wrap"><svg id="pie" viewBox="0 0 200 200" role="img" aria-label="Shares of the fund by church"></svg>
+      <div class="pie-mid"><b id="share">–</b><small id="shareLab">loading</small></div></div>
+    <h2>All partner churches</h2>
+    <ol class="rank" id="rank"></ol>
+    <p class="fine">The bright line on each bar is the 25 needed to qualify. Counts update live as players play.</p>
   </section>
 
   <p><a href="../">How the partner program works</a> · <a href="../terms.html">Program terms</a></p>
@@ -96,20 +127,67 @@ function show(c, active){
   else { chip.className = "chip wait"; chip.textContent = (GOAL - active) + " more to qualify this quarter"; }
 }
 
+const esc = t => String(t).replace(/[&<>"]/g, ch => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch]));
+
+function pie(rows, me){                                  // rows: [{c, n}] of qualifying churches only
+  const svg = $("pie"), R = 92, r = 60, cx = 100, cy = 100, total = rows.reduce((a, x) => a + x.n, 0);
+  const mine = rows.find(x => x.c.id === me);
+  if (!total){
+    svg.innerHTML = `<circle cx="100" cy="100" r="${(R + r) / 2}" fill="none" stroke="var(--dim)" stroke-width="${R - r}"/>`;
+    $("share").textContent = "–"; $("shareLab").textContent = "No church has reached 25 yet this quarter"; return;
+  }
+  if (rows.length === 1){
+    const x = rows[0];
+    svg.innerHTML = `<circle cx="100" cy="100" r="${(R + r) / 2}" fill="none" stroke="${x.c.id === me ? "var(--gold)" : "#6E6180"}" stroke-width="${R - r}"><title>${esc(x.c.name)}: 100%</title></circle>`;
+  } else {
+    let a = -Math.PI / 2; const gap = 0.012;               // a hairline of ground between slices
+    svg.innerHTML = rows.map(x => {
+      const da = 2 * Math.PI * x.n / total, a0 = a + gap, a1 = a + da - gap; a += da;
+      const big = a1 - a0 > Math.PI ? 1 : 0, p = (rad, ang) => (cx + rad * Math.cos(ang)).toFixed(2) + " " + (cy + rad * Math.sin(ang)).toFixed(2);
+      const d = `M ${p(R, a0)} A ${R} ${R} 0 ${big} 1 ${p(R, a1)} L ${p(r, a1)} A ${r} ${r} 0 ${big} 0 ${p(r, a0)} Z`;
+      return `<path d="${d}" fill="${x.c.id === me ? "var(--gold)" : "#6E6180"}"><title>${esc(x.c.name)}: ${Math.round(100 * x.n / total)}%</title></path>`;
+    }).join("");
+  }
+  if (mine){ $("share").textContent = Math.round(100 * mine.n / total) + "%"; $("shareLab").textContent = "your church's share right now"; }
+  else { $("share").textContent = rows.length; $("shareLab").textContent = rows.length === 1 ? "church sharing the fund" : "churches sharing the fund"; }
+}
+
+function rank(rows, me){                                 // every partner church, most active players first
+  const top = Math.max(GOAL * 1.2, ...rows.map(x => x.n));
+  $("rank").innerHTML = rows.map((x, i) => `<li class="${x.c.id === me ? "me" : ""}">
+      <span class="rk">${i + 1}</span>
+      <span class="nm">${esc(x.c.name)}<span>${esc(x.c.city)}</span></span>
+      <span class="ct">${x.n == null ? "–" : x.n}<small>${x.n >= GOAL ? "qualifies" : "active"}</small></span>
+      <span class="track"><i style="width:${Math.min(100, 100 * (x.n || 0) / top)}%"></i><em style="left:${100 * GOAL / top}%"></em></span></li>`).join("");
+}
+
+const DEMO = qs.has("demo");                             // ?demo : made-up numbers, to see the pie before real ones exist
 async function load(){
   let list = [];
-  try { list = ((await (await fetch("../../churches.json", { cache: "no-store" })).json()).churches || []).filter(c => !c.test); } catch(e){}
+  try { list = ((await (await fetch("../../churches.json", { cache: "no-store" })).json()).churches || []).filter(c => DEMO ? true : !c.test); } catch(e){}
+  if (DEMO) list = list.filter(x => x.id !== "test-church").slice(0, 9).map(x => ({ ...x, name: x.name.replace(" (test)", "") }));
   const id = qs.get("c") || "";
   const c = list.find(x => x.id === id);
   const sel = $("sel");
   sel.innerHTML = (c ? "" : `<option value="" selected disabled>Choose your church</option>`) + list.map(x => `<option value="${x.id}"${x.id === id ? " selected" : ""}>${x.name}, ${x.city}</option>`).join("");
-  sel.onchange = () => { if (sel.value) location.search = "?c=" + encodeURIComponent(sel.value); };   // the link then names the church, so a church can bookmark it
+  sel.onchange = () => { if (sel.value) location.search = "?c=" + encodeURIComponent(sel.value) + (DEMO ? "&demo" : ""); };   // the link then names the church, so a church can bookmark it
   show(c, null);
-  if (!COUNT_URL || !c) return;
-  try {
-    const r = await (await fetch(COUNT_URL + "?church=" + encodeURIComponent(c.id))).json();
-    show(c, typeof r.active === "number" ? r.active : null);
-  } catch(e){ show(c, null); }
+  if (DEMO){
+    const fake = [41, 33, 28, 26, 19, 12, 8, 5, 2];
+    const rows = list.map((x, i) => ({ c: x, n: fake[i] || 0 }));
+    const me = (c || list[0]).id; if (!c) show(list[0], rows[0].n); else show(c, rows.find(x => x.c.id === me).n);
+    $("fine").textContent = "EXAMPLE NUMBERS ONLY. " + $("fine").textContent;
+    pie(rows.filter(x => x.n >= GOAL), me); rank(rows, me); return;
+  }
+  if (!COUNT_URL) return;
+  const rows = await Promise.all(list.map(async x => {   // one answer per church (fine while the list is short)
+    try { const r = await (await fetch(COUNT_URL + "?church=" + encodeURIComponent(x.id))).json(); return { c: x, n: typeof r.active === "number" ? r.active : null }; }
+    catch(e){ return { c: x, n: null }; }
+  }));
+  rows.sort((a, b) => (b.n || 0) - (a.n || 0) || a.c.name.localeCompare(b.c.name));
+  if (c){ const mine = rows.find(x => x.c.id === c.id); show(c, mine ? mine.n : null); }
+  pie(rows.filter(x => x.n >= GOAL), c ? c.id : "");
+  rank(rows, c ? c.id : "");
 }
 marks(0); load();
 </script>
