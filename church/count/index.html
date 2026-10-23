@@ -153,11 +153,11 @@ function pie(rows, me){                                  // rows: [{c, n}] of qu
 }
 
 function rank(rows, me){                                 // every partner church, most active players first
-  const top = Math.max(GOAL * 1.2, ...rows.map(x => x.n));
+  const top = Math.max(GOAL * 1.2, ...rows.map(x => x.n)), pot = rows.reduce((a, x) => a + (x.n >= GOAL ? x.n : 0), 0);
   $("rank").innerHTML = rows.map((x, i) => `<li class="${x.c.id === me ? "me" : ""}">
       <span class="rk">${i + 1}</span>
       <span class="nm">${esc(x.c.name)}<span>${esc(x.c.city)}</span></span>
-      <span class="ct">${x.n == null ? "–" : x.n}<small>${x.n >= GOAL ? "qualifies" : "active"}</small></span>
+      <span class="ct">${x.n == null ? "–" : x.n}<small>${x.n >= GOAL ? Math.round(100 * x.n / pot) + "% of the pie" : "active"}</small></span>
       <span class="track"><i style="width:${Math.min(100, 100 * (x.n || 0) / top)}%"></i><em style="left:${100 * GOAL / top}%"></em></span></li>`).join("");
 }
 
