@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "churches": [
+    { "id": "test-church", "name": "Test Church (for testing)", "city": "Testing only", "test": true }
+  ]
+}
