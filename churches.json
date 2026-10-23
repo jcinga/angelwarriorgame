@@ -2,6 +2,11 @@
  "version": 1,
  "churches": [
   {
+   "id": "st-robert-bellarmine-burbank",
+   "name": "St. Robert Bellarmine Church",
+   "city": "Burbank, CA"
+  },
+  {
    "id": "test-church",
    "name": "Test Church (for testing)",
    "city": "Testing only",

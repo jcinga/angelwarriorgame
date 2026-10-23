@@ -1,0 +1,114 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Church Player Count</title>
+<meta name="description" content="How many active Angel Warrior players your partner church has this quarter.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&display=swap">
+<style>
+  /* the church page's abyss and gold */
+  :root{
+    color-scheme: dark;
+    --ground:#0B090F; --panel:#15111B; --rule:#2A2433; --ink:#EDE6DA; --muted:#A79FB2;
+    --gold:#E8B44C; --gold-soft:#F2DFA6; --dim:#3A3245;
+    --display:'Cinzel', 'Trajan Pro', Georgia, serif; --body:'Literata', Georgia, 'Times New Roman', serif;
+  }
+  body{ background:var(--ground); color:var(--ink); font-family:var(--body); font-size:17px; line-height:1.65; margin:0; padding-inline:20px; padding-block:48px 72px; }
+  a{ color:var(--gold); }
+  .wrap{ max-width:36rem; margin:0 auto; display:flex; flex-direction:column; gap:36px; }
+  .eyebrow{ font-family:var(--display); font-weight:600; font-size:13px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); }
+  header{ display:flex; flex-direction:column; gap:8px; }
+  h1{ font-family:var(--display); font-weight:700; font-size:clamp(26px, 6vw, 38px); line-height:1.15; margin:0; color:var(--gold-soft); text-wrap:balance; }
+  .city{ color:var(--muted); margin:0; }
+  p{ margin:0; max-width:65ch; }
+
+  .card{ background:var(--panel); border:1px solid var(--rule); border-radius:12px; padding:26px 24px; display:flex; flex-direction:column; gap:18px; }
+  .big{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  .num{ font-family:var(--display); font-weight:700; font-size:clamp(56px, 14vw, 84px); line-height:1; color:var(--gold); font-variant-numeric:tabular-nums; }
+  .of{ font-family:var(--display); font-weight:600; font-size:20px; color:var(--muted); }
+  .label{ color:var(--ink); }
+  /* one mark per player up to the 25 a church needs */
+  .marks{ display:grid; grid-template-columns:repeat(25, minmax(0,1fr)); gap:3px; }
+  .marks i{ display:block; height:14px; border-radius:2px; background:var(--dim); }
+  .marks i.on{ background:var(--gold); }
+  .chip{ align-self:flex-start; font-family:var(--display); font-weight:600; font-size:12px; letter-spacing:.12em; text-transform:uppercase; padding:5px 12px; border-radius:999px; border:1px solid var(--gold); color:var(--gold-soft); }
+  .chip.wait{ border-color:var(--rule); color:var(--muted); }
+  .fine{ color:var(--muted); font-size:15px; }
+
+  .pick{ display:flex; flex-direction:column; gap:10px; }
+  .pick label{ font-family:var(--display); font-weight:600; font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .pick select{ font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--rule); border-radius:8px; padding:10px 12px; }
+  .pick select:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+  footer{ border-top:1px solid var(--rule); padding-top:20px; color:var(--muted); font-size:14px; }
+</style>
+
+<main class="wrap">
+  <header>
+    <span class="eyebrow">Angel Warrior · Partner church count</span>
+    <h1 id="name">Your church</h1>
+    <p class="city" id="city"></p>
+  </header>
+
+  <section class="card" aria-live="polite">
+    <div class="big"><span class="num" id="num">–</span><span class="of">of 25</span></div>
+    <p class="label" id="label">active players this quarter</p>
+    <div class="marks" id="marks" aria-hidden="true"></div>
+    <span class="chip wait" id="chip">Counting starts with the November update</span>
+    <p class="fine" id="fine">An active player picked your church in the game and played on at least six different days this quarter. Each player counts once, for the church they picked last. Players are never named; we only see a count.</p>
+  </section>
+
+  <section class="pick">
+    <label for="sel">Another church</label>
+    <select id="sel"></select>
+  </section>
+
+  <p><a href="../">How the partner program works</a> · <a href="../terms.html">Program terms</a></p>
+  <footer>© 2026 Jerry Ching. Angel Warrior is an independent game.</footer>
+</main>
+
+<script>
+/* the count sheet (church_server/Code.gs, deployed as a Google Apps Script web app). Empty = not counting yet. */
+const COUNT_URL = "";
+const GOAL = 25;
+const $ = id => document.getElementById(id);
+const qs = new URLSearchParams(location.search);
+
+function quarterNow(){                                   // the quarter in Pacific time, as the sheet counts it
+  const d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+  const q = Math.floor(d.getMonth() / 3) + 1, end = new Date(d.getFullYear(), q * 3, 0);
+  return { label: d.getFullYear() + " Q" + q, end: end.toLocaleDateString("en-US", { month: "long", day: "numeric" }) };
+}
+
+function marks(n){
+  $("marks").innerHTML = Array.from({ length: GOAL }, (_, i) => `<i class="${i < n ? "on" : ""}"></i>`).join("");
+}
+
+function show(c, active){
+  const q = quarterNow();
+  $("name").textContent = c ? c.name : "Pick your church";
+  $("city").textContent = c ? c.city : "";
+  document.title = c ? c.name + " Count" : "Church Player Count";
+  $("label").textContent = "active players in " + q.label + " (the quarter ends " + q.end + ")";
+  marks(active || 0);
+  const chip = $("chip");
+  if (active == null){ $("num").textContent = "–"; chip.className = "chip wait"; chip.textContent = COUNT_URL ? "Count unavailable right now. Try again in a minute." : "Counting starts with the November update"; return; }
+  $("num").textContent = active;
+  if (active >= GOAL){ chip.className = "chip"; chip.textContent = "Qualifies for this quarter's fund"; }
+  else { chip.className = "chip wait"; chip.textContent = (GOAL - active) + " more to qualify this quarter"; }
+}
+
+async function load(){
+  let list = [];
+  try { list = ((await (await fetch("../../churches.json", { cache: "no-store" })).json()).churches || []).filter(c => !c.test); } catch(e){}
+  const id = qs.get("c") || (list[0] && list[0].id) || "";
+  const c = list.find(x => x.id === id);
+  const sel = $("sel");
+  sel.innerHTML = list.map(x => `<option value="${x.id}"${x.id === id ? " selected" : ""}>${x.name}, ${x.city}</option>`).join("");
+  sel.onchange = () => { location.search = "?c=" + encodeURIComponent(sel.value); };
+  show(c, null);
+  if (!COUNT_URL || !c) return;
+  try {
+    const r = await (await fetch(COUNT_URL + "?church=" + encodeURIComponent(c.id))).json();
+    show(c, typeof r.active === "number" ? r.active : null);
+  } catch(e){ show(c, null); }
+}
+marks(0); load();
+</script>
