@@ -1,6 +1,161 @@
 {
-  "version": 1,
-  "churches": [
-    { "id": "test-church", "name": "Test Church (for testing)", "city": "Testing only", "test": true }
-  ]
+ "version": 1,
+ "churches": [
+  {
+   "id": "test-church",
+   "name": "Test Church (for testing)",
+   "city": "Testing only",
+   "test": true
+  },
+  {
+   "id": "test-01",
+   "name": "St. Mary's Parish (test)",
+   "city": "San Francisco, CA",
+   "test": true
+  },
+  {
+   "id": "test-02",
+   "name": "Grace Community Church (test)",
+   "city": "Oakland, CA",
+   "test": true
+  },
+  {
+   "id": "test-03",
+   "name": "First Baptist Church (test)",
+   "city": "Austin, TX",
+   "test": true
+  },
+  {
+   "id": "test-04",
+   "name": "St. Michael the Archangel (test)",
+   "city": "Houston, TX",
+   "test": true
+  },
+  {
+   "id": "test-05",
+   "name": "Holy Trinity (test)",
+   "city": "Chicago, IL",
+   "test": true
+  },
+  {
+   "id": "test-06",
+   "name": "Calvary Chapel (test)",
+   "city": "Costa Mesa, CA",
+   "test": true
+  },
+  {
+   "id": "test-07",
+   "name": "St. Joseph's (test)",
+   "city": "Boston, MA",
+   "test": true
+  },
+  {
+   "id": "test-08",
+   "name": "New Life Fellowship (test)",
+   "city": "Seattle, WA",
+   "test": true
+  },
+  {
+   "id": "test-09",
+   "name": "Our Lady of Peace (test)",
+   "city": "Santa Clara, CA",
+   "test": true
+  },
+  {
+   "id": "test-10",
+   "name": "Cornerstone Church (test)",
+   "city": "Denver, CO",
+   "test": true
+  },
+  {
+   "id": "test-11",
+   "name": "St. Anne's (test)",
+   "city": "New Orleans, LA",
+   "test": true
+  },
+  {
+   "id": "test-12",
+   "name": "Living Water Church (test)",
+   "city": "Phoenix, AZ",
+   "test": true
+  },
+  {
+   "id": "test-13",
+   "name": "Sacred Heart (test)",
+   "city": "Philadelphia, PA",
+   "test": true
+  },
+  {
+   "id": "test-14",
+   "name": "Hope Chapel (test)",
+   "city": "Honolulu, HI",
+   "test": true
+  },
+  {
+   "id": "test-15",
+   "name": "St. Patrick's (test)",
+   "city": "New York, NY",
+   "test": true
+  },
+  {
+   "id": "test-16",
+   "name": "Redeemer Church (test)",
+   "city": "Atlanta, GA",
+   "test": true
+  },
+  {
+   "id": "test-17",
+   "name": "St. Francis of Assisi (test)",
+   "city": "Portland, OR",
+   "test": true
+  },
+  {
+   "id": "test-18",
+   "name": "Faith Bible Church (test)",
+   "city": "Nashville, TN",
+   "test": true
+  },
+  {
+   "id": "test-19",
+   "name": "Christ the King (test)",
+   "city": "Minneapolis, MN",
+   "test": true
+  },
+  {
+   "id": "test-20",
+   "name": "St. Gabriel's (test)",
+   "city": "Miami, FL",
+   "test": true
+  },
+  {
+   "id": "test-21",
+   "name": "Harvest Church (test)",
+   "city": "Sacramento, CA",
+   "test": true
+  },
+  {
+   "id": "test-22",
+   "name": "St. Raphael (test)",
+   "city": "San Diego, CA",
+   "test": true
+  },
+  {
+   "id": "test-23",
+   "name": "Emmanuel Church (test)",
+   "city": "Salt Lake City, UT",
+   "test": true
+  },
+  {
+   "id": "test-24",
+   "name": "St. Teresa's (test)",
+   "city": "Las Vegas, NV",
+   "test": true
+  },
+  {
+   "id": "test-25",
+   "name": "Good Shepherd (test)",
+   "city": "Kansas City, MO",
+   "test": true
+  }
+ ]
 }
