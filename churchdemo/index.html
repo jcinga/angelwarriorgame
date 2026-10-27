@@ -1,0 +1,1786 @@
+<meta charset="utf-8">   <!-- without it the app read the page as Latin-1: "›" on the PICK CHURCH button came out as "â€º" (Jerry, 2026-10-23) -->
+<base href="/play/">   <!-- the art and music are the /play demo's own files -->
+<title>Angel Warrior Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">   <!-- without this the app's web view laid the page out 980px wide and the game sat small in the middle -->
+<!-- the two faces travel with the game (Google Fonts, latin): a stylesheet fetched from the web held the app's page for twenty seconds while the simulator waited on the network -->
+<style>
+@font-face{font-family:'Cinzel';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/Cinzel-400.woff2?v=242) format('woff2');}
+@font-face{font-family:'Cinzel';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/Cinzel-600.woff2?v=242) format('woff2');}
+@font-face{font-family:'Cinzel';font-style:normal;font-weight:700;font-display:swap;src:url(assets/fonts/Cinzel-700.woff2?v=242) format('woff2');}
+@font-face{font-family:'Cormorant Garamond';font-style:italic;font-weight:400;font-display:swap;src:url(assets/fonts/CormorantGaramond-400i.woff2?v=242) format('woff2');}
+@font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/CormorantGaramond-400.woff2?v=242) format('woff2');}
+@font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/CormorantGaramond-600.woff2?v=242) format('woff2');}
+</style>
+<style>
+  :root{ --void:#0A0810; --gold:#E8B44C; --gold-deep:#A87A28; --vellum:#E8DCC4; --dim:#8A8194;
+         --disp:'Cinzel',Georgia,serif; --body:'Cormorant Garamond',Georgia,serif; --ui:ui-monospace,'SF Mono',Menlo,monospace; }
+  *{box-sizing:border-box}
+  body{margin:0;background:#000;color:var(--vellum);font-family:var(--body);-webkit-font-smoothing:antialiased;overflow:hidden}
+  /* 100vh on a phone is the viewport WITHOUT the browser bars, so they sit over the bottom of the game.
+     svh is the smallest viewport — always visible — with vh kept as the fallback for older browsers. */
+  .stage{position:relative;z-index:1;width:100vw;height:100vh;height:100svh;display:flex;align-items:center;justify-content:center;background:#000}
+  canvas{display:block;max-width:100%;max-height:100%;aspect-ratio:480/800;background:#000;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
+  /* nothing on this page is text to select: a long press on the phone must not raise Copy / Translate */
+  html,body,.stage,canvas{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+  /* partner churches (1.1): the list over the title, in the game's own gold and ink */
+  .church{position:fixed;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom));background:rgba(5,3,10,.82);opacity:0;transition:opacity .6s ease}
+  .church[hidden]{display:none}
+  .church.on{opacity:1}
+  .church .ch-card{transform:translateY(18px) scale(.97);transition:transform .6s cubic-bezier(.2,.8,.2,1)}
+  .church.on .ch-card{transform:none}
+  @media (prefers-reduced-motion: reduce){ .church, .church .ch-card{transition:none} }
+  .ch-card{width:min(420px,100%);max-height:100%;display:flex;flex-direction:column;gap:12px;background:#120E1A;border:1px solid #3A2F48;border-radius:14px;padding:20px 18px}
+  .ch-card h2{font-family:var(--disp);font-weight:700;font-size:22px;letter-spacing:.06em;color:var(--gold);margin:0;text-align:center}
+  .ch-card p{margin:0;font-size:18px;line-height:1.35;color:var(--vellum);text-align:center}
+  #chSearch{font:16px var(--disp);padding:10px 12px;border-radius:8px;border:1px solid #3A2F48;background:#0A0810;color:var(--vellum);-webkit-user-select:text;user-select:text}
+  #chList{list-style:none;margin:0;padding:0;overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1;min-height:80px;max-height:46vh;display:flex;flex-direction:column;gap:6px}
+  #chList button{width:100%;text-align:left;padding:10px 12px;border-radius:8px;border:1px solid #2A2236;background:#1A1424;color:var(--vellum);font:600 16px var(--disp);letter-spacing:.02em}
+  #chList button small{display:block;font:15px var(--body);color:var(--dim);letter-spacing:0;margin-top:2px}
+  #chList button[aria-pressed="true"]{border-color:var(--gold);background:#2A2010}
+  #chList .empty{color:var(--dim);font-size:17px;text-align:center;padding:12px}
+  .ch-row{display:flex;gap:10px}
+  .ch-row button{flex:1;padding:11px;border-radius:8px;font:700 14px var(--disp);letter-spacing:.1em;text-transform:uppercase}
+  #chNone{background:transparent;border:1px solid #3A2F48;color:var(--vellum)}
+  #chClose{background:var(--gold);border:0;color:#1A1208}
+  .ch-join{margin:2px 0 0;text-align:center;font-size:16px;color:var(--dim)}
+  .ch-join a{color:var(--gold);font:700 14px var(--disp);letter-spacing:.08em;text-transform:uppercase;text-decoration:underline;text-underline-offset:3px;display:inline-block;padding:6px 4px}
+</style>
+
+<div class="stage"><canvas id="cv" width="480" height="800"></canvas></div>
+<div class="church" id="church" hidden>
+  <div class="ch-card" role="dialog" aria-labelledby="chTitle">
+    <h2 id="chTitle">Playing with a church?</h2>
+    <p id="chSub">Pick your church and your play counts toward its share. You can change it any time with PICK CHURCH on the title screen.</p>
+    <input id="chSearch" type="search" placeholder="Search by name or city" autocomplete="off" autocorrect="off" spellcheck="false">
+    <ul id="chList"></ul>
+    <div class="ch-row"><button id="chNone" type="button">No thanks</button><button id="chClose" type="button">Done</button></div>
+    <p class="ch-join">Church not on the list?<br><a id="chJoin" href="https://angelwarriorgame.com/church">Become a partner church</a></p>
+  </div>
+</div>
+
+<!-- kept on-screen at 4px: Chrome pauses a hidden muted video "to save power" and the fire dies -->
+<video id="fireA" muted playsinline preload="auto" style="position:fixed;left:0;top:0;width:4px;height:4px;opacity:.03;pointer-events:none;z-index:0"></video>
+<video id="fireB" muted playsinline preload="auto" style="position:fixed;left:0;top:0;width:4px;height:4px;opacity:.03;pointer-events:none;z-index:0"></video>
+
+<script>window.AW_DEMO = true; window.AW_DEMO_STORE = true; window.AW_DEMO_LABEL = "PRE-ORDER NOW"; window.AW_DEMO_SUB = "FREE ON THE APP STORE · NOVEMBER 1";   // after Nov 1: label "GET THE FULL GAME", sub "FREE ON THE APP STORE"</script>
+<script>
+const W = 480, H = 800;
+if (window.NATIVE_APP) console.log("boot: script running");
+const cv = document.getElementById("cv"), g = cv.getContext("2d");
+
+/* ============================ tuning — Flappy Bird's numbers, scaled to this stage ============================ */
+const T = {
+  scroll: 200,            // px/s the world comes at him
+  cluster: [3, 5],        // pairs per cluster
+  wave: [70, 150],        // a cluster's gaps ride a wave of this amplitude
+  tight: 235,             // px between pairs inside a cluster
+  colonnade: 0.3,         // chance a cluster is instead a colonnade: three pairs shoulder to shoulder, gaps aligned
+  shoulder: 118,          // px between colonnade pairs
+  clearing: [640, 900],   // px of open floor between clusters — where the souls are
+  step: 150,              // max change of gap height between neighbours in a cluster
+  gap: 250,               // vertical opening
+  gravity: 1400, flap: -440, vmax: 900,
+  colScale: 0.30,         // column ≈ 80px wide
+  bodyR: 23,              // his body, for columns / fire / demons
+  fireLine: H - 150,      // below this, the fire has him
+  demonSpeed: 70, demonR: 30,
+  hit: { demon:[65,75], vulture:[37,44], fish:[70,68], bee:[54,44], toad:[60,44], fallen:[62,40] },   // half-width, half-height as drawn
+  demonOdds: [0.85, 0.9, 0.92, 0.95, 0.96, 0.97],
+  demonOdds2: [0.18, 0.28, 0.36, 0.45, 0.52, 0.58],
+  lurkOdds: [0.40, 0.44, 0.48, 0.52, 0.56, 0.60],   // per in-cluster gap: the chance one is waiting IN the passage
+  lane: 92,               // the clear air a threader must leave beside it — his body needs 37; the rest of the gap it may fill
+  jinkOdds: 0.3,          // a hunter that breaks off the blade line at the last moment — once in three, or it reads as always fleeing
+  knockback: 50, recover: 26,      // px shoved left per hit, px/s he claws back
+  blazeTime: 1.5,          // a brief reward after a soul (3.2 read as free kills — Jerry, 2026-09-23 night)
+  levelAt: [0, 40, 80, 120, 160, 200],   // columns passed to reach each depth
+  fade: [5, 5, 5, 5, 4.2, 4.2],   // seconds the world takes to change underneath you, per depth arrived at — the drop into V is quicker
+  columnKills: true,      // Flappy's rule: touch the stone and the run is over. Set false for the old three-strikes bar
+  power: 100, columnHit: 34, headHit: 9, feetHit: 5, demonHit: 22, soulHeal: 13, soulHealBoss: 15, grace: 0.9,   // a column costs a third of him; a soul gives an eighth back (20 → 12, Jerry, 2026-09-23 night)
+};
+
+const PICK = { y: 606, x0: 0, gap: 52 };      // "Level  1 2 3" on the title screen — where a run begins
+/* ============================ assets ============================ */
+const META = {"wing_far": {"x": 65, "y": 131, "w": 333, "h": 528}, "cape": {"x": 66, "y": 638, "w": 269, "h": 459}, "legs": {"x": 148, "y": 880, "w": 295, "h": 247}, "body": {"x": 284, "y": 513, "w": 539, "h": 400}, "head": {"x": 393, "y": 400, "w": 168, "h": 181}, "wing_near": {"x": 222, "y": 167, "w": 172, "h": 431}};
+const SRC  = {"wing_far":"assets/wing_far.png?v=121","cape":"assets/cape.png?v=121","legs":"assets/legs.png?v=121","body":"assets/body.png?v=121","head":"assets/head.png?v=121","wing_near":"assets/wing_near.png?v=121"};
+const ORDER = ["wing_far","cape","legs","body","head","wing_near"];
+const img = {}; let ready = 0;
+for (const k of ORDER){ const im = new Image(); im.onload = ()=>{ ready++; }; im.src = SRC[k]; img[k] = im; }
+const PIVOT = { wing_near:[352,565], wing_far:[318,598], head:[466,574], cape:[312,650], legs:[322,882] };
+const FIG = { cx:420, cy:640, s:0.20 };
+const D = {"frames": 14, "w": 460, "h": 561, "anchor": [230.9, 346.0], "src":"assets/demon1_sheet.png?v=121"};
+const dimg = new Image(); let dready=false; dimg.onload=()=>{dready=true;}; dimg.src = D.src;
+const SOULS = [{"w": 181, "h": 294, "wait": 12, "ascend": 37, "cx": 90.5, "feet": 206, "src": "assets/soul1_sheet.png?v=121"},
+               {"w": 200, "h": 293, "wait": 13, "ascend": 33, "feet": 268, "cx": 100.0, "src": "assets/soul2_sheet.png?v=135"}];
+SOULS.forEach(S=>{ S.img = new Image(); S.ready=false; S.img.onload=()=>{S.ready=true;}; S.img.src = S.src; });
+const logo = new Image(); let lready=false; logo.onload=()=>{lready=true;}; logo.src = "assets/logo_aw.png?v=211";   // Angel Warrior (2026-09-23): its own glow, untouched — drawn additively so its black adds nothing
+const C = {"w": 267, "h": 1030, "slice": [810, 1010], "src":"assets/column.png?v=121"};
+/* Depth II's obstacles: five ash spires, keyed from Grok; two get drawn fat */
+const SPIRES = [{"src": "assets/spire1.png?v=121", "w": 140, "h": 527, "tipx": 59.0, "shaft": [30, 111], "slice": [367, 511], "tipw": 71.0, "solid": 7}, {"src": "assets/spire2.png?v=121", "w": 100, "h": 529, "tipx": 48.0, "shaft": [8, 86], "slice": [369, 513], "tipw": 48.0, "solid": 21}, {"src": "assets/spire3.png?v=121", "w": 133, "h": 524, "tipx": 62.0, "shaft": [43, 85], "slice": [364, 508], "tipw": 59.5, "solid": 9}, {"src": "assets/spire4.png?v=121", "w": 116, "h": 518, "tipx": 46.0, "shaft": [11, 112], "slice": [358, 502], "tipw": 58.5, "solid": 70}, {"src": "assets/spire5.png?v=121", "w": 135, "h": 503, "tipx": 52.0, "shaft": [17, 100], "slice": [343, 487], "tipw": 60.5, "solid": 7}];
+SPIRES.forEach(S=>{ S.img = new Image(); S.ready=false; S.img.onload=()=>{S.ready=true;}; S.img.src = S.src; });
+SPIRES.forEach(S=>{ S.s = 0.62; });
+/* Depth III's obstacles: seventeen iron gate teeth, rust-eaten and crusted with sulphur — the clean ones from Grok's four sheets */
+const TEETH = [{"src": "assets/gate1.png?v=270", "w": 122, "h": 673, "tipx": 65.2, "shaft": [0, 121], "slice": [471, 652], "tipw": 27.5, "s": 0.857, "solid": 231}, {"src": "assets/gate2.png?v=270", "w": 119, "h": 656, "tipx": 56.9, "shaft": [0, 119], "slice": [459, 636], "tipw": 22.4, "s": 0.857, "solid": 259}, {"src": "assets/gate3.png?v=270", "w": 94, "h": 661, "tipx": 45.2, "shaft": [3, 94], "slice": [462, 641], "tipw": 16.5, "s": 0.857, "solid": 154}, {"src": "assets/gate4.png?v=270", "w": 70, "h": 652, "tipx": 34.3, "shaft": [0, 70], "slice": [456, 632], "tipw": 9.8, "s": 0.857, "solid": 242}, {"src": "assets/gate5.png?v=270", "w": 94, "h": 490, "tipx": 45.6, "shaft": [1, 94], "slice": [343, 475], "tipw": 47.2, "s": 0.857, "solid": 22}, {"src": "assets/gate6.png?v=270", "w": 70, "h": 491, "tipx": 33.8, "shaft": [1, 69], "slice": [343, 476], "tipw": 25.4, "s": 0.857, "solid": 54}, {"src": "assets/gate7.png?v=270", "w": 57, "h": 492, "tipx": 28.2, "shaft": [1, 55], "slice": [344, 477], "tipw": 13.0, "s": 0.857, "solid": 151}, {"src": "assets/gate8.png?v=270", "w": 83, "h": 492, "tipx": 38.4, "shaft": [20, 60], "slice": [344, 477], "tipw": 9.5, "s": 0.857, "solid": 128}, {"src": "assets/gate9.png?v=270", "w": 79, "h": 491, "tipx": 50.6, "shaft": [26, 74], "slice": [343, 476], "tipw": 10.7, "s": 0.857, "solid": 231}, {"src": "assets/gate10.png?v=270", "w": 102, "h": 340, "tipx": 47.3, "shaft": [0, 94], "slice": [237, 329], "tipw": 33.3, "s": 0.857, "solid": 54}, {"src": "assets/gate11.png?v=270", "w": 97, "h": 349, "tipx": 40.4, "shaft": [0, 97], "slice": [244, 338], "tipw": 16.6, "s": 0.857, "solid": 146}, {"src": "assets/gate12.png?v=270", "w": 71, "h": 332, "tipx": 37.9, "shaft": [0, 71], "slice": [232, 322], "tipw": 10.5, "s": 0.857, "solid": 127}, {"src": "assets/gate13.png?v=270", "w": 74, "h": 333, "tipx": 32.1, "shaft": [0, 73], "slice": [233, 323], "tipw": 9.3, "s": 0.857, "solid": 133}, {"src": "assets/gate14.png?v=270", "w": 78, "h": 312, "tipx": 38.7, "shaft": [1, 78], "slice": [218, 302], "tipw": 16.1, "s": 0.857, "solid": 83}, {"src": "assets/gate15.png?v=270", "w": 71, "h": 510, "tipx": 32.5, "shaft": [0, 71], "slice": [357, 494], "tipw": 13.5, "s": 0.857, "solid": 166}, {"src": "assets/gate16.png?v=270", "w": 50, "h": 498, "tipx": 25.0, "shaft": [0, 49], "slice": [348, 483], "tipw": 11.2, "s": 0.857, "solid": 78}, {"src": "assets/gate17.png?v=270", "w": 48, "h": 498, "tipx": 23.1, "shaft": [0, 48], "slice": [348, 483], "tipw": 14.0, "s": 0.857, "solid": 51}];
+TEETH.forEach(S=>{ S.img = new Image(); S.ready=false; S.img.onload=()=>{S.ready=true;}; S.img.src = S.src; });
+/* Depth III's flier: the anglerfish of the pit. Grok's clip already loops, so it is played straight through,
+   his frames in his order, black keyed out and nothing else touched. Laid out in a grid: one long strip
+   would be too wide for a phone to decode. */
+const FI = {"frames":49,"cols":7,"w":391,"h":247,"anchor":[138.5,130.0],"fps":16,"good":49};   // the whole chomp from Grok's clip, every 3rd frame, rekeyed from the raw, tail 1.8x
+FI.src = "assets/fish_sheet.png?v=127";
+const fimg = new Image(); let fready=false; fimg.onload=()=>{fready=true;}; fimg.src = FI.src;
+const FS = 0.477;                                                              // 0.744 on the old half-size cells; the head is the same height on screen
+function drawFish(ctx, x, y, t, ph){
+  if (!fready) return;
+  const n = FI.good, fi = Math.floor((t*FI.fps + ph*6) % n);                 // the whole clip, straight through: it opens its mouth and shuts it again
+  const cx = fi % FI.cols, cy = (fi / FI.cols) | 0;                            // out of the video frame, so we swim back instead
+  ctx.save(); ctx.translate(x, y); ctx.scale(FS, FS); ctx.translate(-FI.anchor[0], -FI.anchor[1]);
+  ctx.drawImage(fimg, cx*FI.w, cy*FI.h, FI.w, FI.h, 0, 0, FI.w, FI.h);
+  if (SOLID) ctx.drawImage(fimg, cx*FI.w, cy*FI.h, FI.w, FI.h, 0, 0, FI.w, FI.h); ctx.restore();
+}
+/* Depth II's flier: the vulture of Hell — one slow beat cut from Grok's clip, head held still */
+const VU = {"frames": 26, "w": 229, "h": 294, "anchor": [106, 201], "src": "assets/vulture_sheet.png?v=121"};
+const vimg = new Image(); let vready=false; vimg.onload=()=>{vready=true;}; vimg.src = VU.src;
+const VS = 0.605;
+function drawVulture(ctx, x, y, t, ph){
+  if (!vready) return;
+  const fi = Math.floor((t*13 + ph*4) % VU.frames);
+  ctx.save(); ctx.translate(x, y); ctx.scale(VS, VS); ctx.translate(-VU.anchor[0], -VU.anchor[1]);
+  ctx.drawImage(vimg, fi*VU.w, 0, VU.w, VU.h, 0, 0, VU.w, VU.h);
+  if (SOLID) ctx.drawImage(vimg, fi*VU.w, 0, VU.w, VU.h, 0, 0, VU.w, VU.h); ctx.restore();
+}
+/* Depth IV's obstacles: nine columns of honeycomb, four of them charred black and sharpened */
+const HIVE = [{"src": "assets/hive1.png?v=121", "w": 108, "h": 604, "tipx": 55.3, "shaft": [13, 103], "slice": [422, 585], "tipw": 17.9, "s": 0.827, "dark": 1, "solid": 127}, {"src": "assets/hive2.png?v=121", "w": 117, "h": 609, "tipx": 55.1, "shaft": [9, 105], "slice": [426, 590], "tipw": 23.2, "s": 0.827, "dark": 1, "solid": 106}, {"src": "assets/hive3.png?v=121", "w": 106, "h": 648, "tipx": 51.4, "shaft": [5, 102], "slice": [453, 628], "tipw": 19.6, "s": 0.827, "dark": 1, "solid": 140}, {"src": "assets/hive4.png?v=121", "w": 96, "h": 678, "tipx": 51.0, "shaft": [1, 95], "slice": [474, 657], "tipw": 18.2, "s": 0.827, "dark": 1, "solid": 93}, {"src": "assets/hive5.png?v=121", "w": 86, "h": 555, "tipx": 39.8, "shaft": [0, 86], "slice": [388, 538], "tipw": 12.6, "s": 0.827, "dark": 0, "solid": 115}, {"src": "assets/hive6.png?v=121", "w": 86, "h": 541, "tipx": 48.1, "shaft": [0, 85], "slice": [378, 524], "tipw": 10.8, "s": 0.827, "dark": 0, "solid": 134}, {"src": "assets/hive7.png?v=121", "w": 89, "h": 576, "tipx": 39.2, "shaft": [0, 89], "slice": [403, 558], "tipw": 11.9, "s": 0.827, "dark": 0, "solid": 113}, {"src": "assets/hive8.png?v=121", "w": 82, "h": 567, "tipx": 38.3, "shaft": [0, 82], "slice": [396, 549], "tipw": 16.7, "s": 0.827, "dark": 0, "solid": 107}, {"src": "assets/hive9.png?v=121", "w": 88, "h": 555, "tipx": 42.0, "shaft": [0, 87], "slice": [388, 538], "tipw": 13.6, "s": 0.827, "dark": 0, "solid": 130}];
+HIVE.forEach(S=>{ S.img = new Image(); S.ready=false; S.img.onload=()=>{S.ready=true;}; S.img.src = S.src; });
+/* Depth V's obstacles: three stalactites of jelly hang from above (stored tip-first, so `hang` ones are
+   flipped like the charred comb), five slimed posts and fungus trunks rise from the water. Bing on magenta
+   and violet — the opposites of the green and the black wood — keyed by colour distance, pre-scaled so s=1. */
+const FUNGUS = [{"src": "assets/goo1.png?v=121", "w": 116, "h": 433, "tipx": 57.5, "shaft": [14, 87], "slice": [386, 430], "tipw": 11, "s": 1, "hang": 1, "solid": 109, "smax": 4}, {"src": "assets/goo2.png?v=121", "w": 112, "h": 264, "tipx": 53.0, "shaft": [12, 88], "slice": [217, 261], "tipw": 12, "s": 1, "hang": 1, "solid": 48, "smax": 4}, {"src": "assets/goo3.png?v=121", "w": 129, "h": 406, "tipx": 62.0, "shaft": [31, 104], "slice": [359, 403], "tipw": 32, "s": 1, "hang": 1, "solid": 44, "smax": 4}, {"src": "assets/stump1.png?v=121", "w": 114, "h": 180, "tipx": 55.0, "shaft": [19, 94], "slice": [133, 177], "tipw": 72, "s": 1, "hang": 0, "solid": 3, "smax": 4}, {"src": "assets/stump2.png?v=121", "w": 151, "h": 287, "tipx": 87.5, "shaft": [50, 126], "slice": [240, 284], "tipw": 67, "s": 1, "hang": 0, "solid": 3, "smax": 4}, {"src": "assets/stump3.png?v=121", "w": 86, "h": 336, "tipx": 43.0, "shaft": [6, 78], "slice": [289, 333], "tipw": 68, "s": 1, "hang": 0, "solid": 6, "smax": 4}, {"src": "assets/stump4.png?v=121", "w": 85, "h": 255, "tipx": 32.0, "shaft": [6, 81], "slice": [208, 252], "tipw": 60, "s": 1, "hang": 0, "solid": 3, "smax": 4}, {"src": "assets/stump5.png?v=121", "w": 112, "h": 390, "tipx": 54.5, "shaft": [18, 89], "slice": [343, 387], "tipw": 65, "s": 1, "hang": 0, "solid": 3, "smax": 4}];
+FUNGUS.forEach(S=>{ S.img = new Image(); S.ready=false; S.img.onload=()=>{S.ready=true;}; S.img.src = S.src; });
+/* Depth VI's obstacles: three shards of black ice rise from the floor with the frozen inside them; three
+   frost-bound chains hang from above (tip-first, `hang`). Bing on ORANGE — the opposite of black ice. The
+   chains are keyed WITHOUT hole-filling: their links are meant to be seen through. */
+const ICE = [{"src": "assets/shard1.png?v=121", "w": 110, "h": 391, "tipx": 50.5, "shaft": [3, 107], "slice": [203, 328], "tipw": 59, "s": 1, "hang": 0, "solid": 43}, {"src": "assets/shard2.png?v=121", "w": 134, "h": 351, "tipx": 82.0, "shaft": [12, 121], "slice": [182, 294], "tipw": 28, "s": 1, "hang": 0, "solid": 42}, {"src": "assets/shard3.png?v=121", "w": 121, "h": 435, "tipx": 45.0, "shaft": [8, 113], "slice": [226, 365], "tipw": 54, "s": 1, "hang": 0, "solid": 26}, {"src": "assets/chain1.png?v=121", "w": 109, "h": 915, "tipx": 39.5, "shaft": [29, 99], "slice": [475, 768], "tipw": 33, "s": 1, "hang": 1, "solid": 97}, {"src": "assets/chain2.png?v=121", "w": 99, "h": 705, "tipx": 37.0, "shaft": [11, 82], "slice": [366, 592], "tipw": 22, "s": 1, "hang": 1, "solid": 72}, {"src": "assets/chain3.png?v=121", "w": 86, "h": 610, "tipx": 23.5, "shaft": [13, 81], "slice": [317, 512], "tipw": 9, "s": 1, "hang": 1, "solid": 90}];
+ICE.forEach(S=>{ S.img = new Image(); S.ready=false; S.img.onload=()=>{S.ready=true;}; S.img.src = S.src; });
+/* Depth IV's flier: the hornet, cut into five pieces and hung on springs — wing, abdomen,
+   legs, thorax, head. The wing beats; everything else lags behind it the way Michael's cape does. */
+const BEE = {"w": 225, "h": 211, "order": ["shin_front", "shin_mid", "shin_hind", "wing", "legs", "abdo", "thorax", "head"], "pivot": {"shin_front": [40.5, 144.0], "shin_mid": [81.6, 154.5], "shin_hind": [147.0, 154.5], "wing": [115.5, 90.0], "legs": [90.0, 123.0], "abdo": [118.5, 114.0], "thorax": [90.0, 102.0], "head": [60.0, 99.0]}, "parent": {"shin_front": "legs", "shin_mid": "legs", "shin_hind": "legs"}, "anchor": [90.0, 108.0]};
+const bimg = {}; BEE.order.forEach(k=>{ const im = new Image(); im.src = "assets/bee_" + k + ".png?v=125"; bimg[k] = im; });
+const BS = 0.62;
+/* how a flier rides. The hornet swims in on a long rise and fall — Jerry's numbers off the rig bench,
+   the phase taken from where he is rather than the clock, so the wavelength holds however fast he closes. */
+function bobOf(d, t){
+  if (d.lurk) return 8*Math.sin(t*5 + d.ph);
+  return d.kind === "bee"  ? 109*Math.sin(d.x*0.011 + t*0.65 + d.ph)
+       : d.kind === "toad" ? 134*Math.sin(d.x*0.011 + t*0.7  + d.ph)
+       : d.kind === "fallen" ? 90*Math.sin(d.x*0.011 + t*0.5 + d.ph)
+       : 8*Math.sin(t*5 + d.ph);
+}
+function flierY(d, t){                                                         // and he never rides into the floor or off the top
+  return Math.max(84, Math.min(T.fireLine - 56, d.y + bobOf(d, t)));
+}
+function drawBee(ctx, x, y, t, ph){
+  if (!bimg.thorax.complete || !bimg.thorax.naturalWidth) return;
+  const w = t*32 + ph*5;                                                       // the wingbeat drives everything
+  const beat = Math.sin(w);
+  const drag = Math.sin(w*0.5 + 0.7), sway = Math.sin(t*2.1 + ph);
+  const ang = {
+    wing:  0.54*beat,                                                          // Jerry, Sep 17: sweep 0.54
+    abdo:  0.085*Math.sin(w - 1.15) + 0.05*sway,                               // the tail swings a beat behind
+    legs: -0.19 - 0.14*Math.sin(w*0.5 - 0.9) + 0.05*drag,                      // trailing back, kicking to recover
+    head:  0.05*Math.sin(w - 2.0) + 0.03*sway,
+    thorax: 0,
+  };
+  const shin = 0.45*Math.sin(w*0.5 - 0.9 - 2.45);                            // the shins hang off the thighs and swing behind the kick — Jerry's knee: 0.45 @ lag 2.45
+  ang.shin_front = shin; ang.shin_mid = shin*0.9; ang.shin_hind = shin*1.1;
+  const bob = 2.4*Math.sin(w + 1.1);
+  ctx.save(); ctx.translate(x, y + bob); ctx.scale(BS, BS); ctx.translate(-BEE.anchor[0], -BEE.anchor[1]);
+  for (const k of BEE.order){
+    const im = bimg[k]; if (!im.complete || !im.naturalWidth) continue;
+    const pv = BEE.pivot[k], par = BEE.parent && BEE.parent[k];
+    ctx.save();
+    if (par){ const q = BEE.pivot[par]; ctx.translate(q[0], q[1]); ctx.rotate(ang[par] || 0); ctx.translate(-q[0], -q[1]); }   // a shin rides its thigh
+    ctx.translate(pv[0], pv[1]); ctx.rotate(ang[k] || 0); ctx.translate(-pv[0], -pv[1]);
+    ctx.drawImage(im, 0, 0); ctx.restore();
+  }
+  ctx.restore();
+}
+/* Depth V's flier: the drowned toad. One Bing painting on black, cut into eight hinged pieces — two wings,
+   jaw, three legs, tail, body. Heavy and lolloping: the body heaves after each stroke, the legs and the
+   tail are dragged behind it. Numbers are Jerry's, off the bench. */
+const TOAD = {"scale": 0.35, "order": ["wing_far", "leg_ffar", "tail", "body", "leg_hind", "jaw", "leg_fnear", "wing_near"], "layers": {"wing_far": {"x": 155.4, "y": 46.2, "w": 76, "h": 76, "pivot": [204.8, 114.8]}, "leg_ffar": {"x": 18.2, "y": 171.1, "w": 118, "h": 44, "pivot": [119.0, 184.8]}, "tail": {"x": 291.2, "y": 144.5, "w": 145, "h": 46, "pivot": [303.8, 176.8]}, "body": {"x": 51.8, "y": 69.6, "w": 275, "h": 187, "pivot": [210.0, 150.5]}, "leg_hind": {"x": 235.5, "y": 159.6, "w": 196, "h": 110, "pivot": [266.0, 182.0]}, "jaw": {"x": 51.8, "y": 137.9, "w": 75, "h": 36, "pivot": [120.4, 153.3]}, "leg_fnear": {"x": 61.6, "y": 199.5, "w": 117, "h": 65, "pivot": [154.0, 210.0]}, "wing_near": {"x": 192.8, "y": 18.5, "w": 205, "h": 126, "pivot": [211.8, 124.2]}}, "anchor": [210.0, 154.0], "W": 437, "H": 291};
+const timg = {}; TOAD.order.forEach(k=>{ const im = new Image(); im.src = "assets/toad_" + k + ".png?v=121"; timg[k] = im; });
+const TS = 0.42;                                                              // 0.6 on the bench's wide canvas is 0.42 on the phone's
+function drawToad(ctx, x, y, t, ph){
+  if (!timg.body.complete || !timg.body.naturalWidth) return;
+  const w = t*16 + ph*3, beat = Math.sin(w), late = Math.sin(w - 1.3), drag = Math.sin(w - 2.1);     // beat 16: Jerry
+  const ang = {
+    wing_near: -0.12 + 0.31*beat,
+    wing_far:  -0.12 + 0.31*0.85*Math.sin(w - 0.72),                          // the far wing a little behind
+    jaw:        0.30*(0.5 + 0.5*Math.sin(w*0.5 + 0.4)),                       // the mouth on its own slower clock
+    leg_hind:   0.42 + 0.12*drag,
+    leg_fnear: -0.32 - 0.096*Math.sin(w - 2.4),
+    leg_ffar:  -0.32 - 0.084*Math.sin(w - 2.7),
+    tail:       0.14*Math.sin(w - 2.4),                                       // dragged behind the heave: it arrives late
+    body: 0 };
+  ctx.save(); ctx.translate(x, y + 9*late); ctx.rotate(-0.12 + 0.05*Math.sin(w - 0.9)); ctx.scale(TS, TS);   // nose down a little: he is going somewhere
+  ctx.translate(-TOAD.anchor[0], -TOAD.anchor[1]);
+  for (const k of TOAD.order){
+    const im = timg[k]; if (!im.complete || !im.naturalWidth) continue;
+    const L = TOAD.layers[k], pv = L.pivot;
+    ctx.save(); ctx.translate(pv[0], pv[1]); ctx.rotate(ang[k] || 0); ctx.translate(-pv[0], -pv[1]);
+    ctx.drawImage(im, L.x, L.y); ctx.restore();
+  }
+  ctx.restore();
+}
+/* Depth VI's flier: the fallen angel — one Bing painting on orange, eight hinged pieces: two wings, two arms,
+   two legs, the crown of thorns (its own island, floating), the body. It rows slow and wide; the arms reach
+   and the legs trail; the crown keeps its own time. Bench defaults until Jerry dials it. */
+const FALLEN = {"scale": 0.35, "order": ["wing_far", "arm_far", "leg_far", "body", "leg_near", "arm_near", "wing_near", "halo"], "layers": {"wing_far": {"x": 164.1, "y": 5.9, "w": 217, "h": 114, "pivot": [190.8, 105.0]}, "arm_far": {"x": 42.7, "y": 124.6, "w": 120, "h": 85, "pivot": [141.8, 138.2]}, "leg_far": {"x": 271.6, "y": 155.4, "w": 132, "h": 127, "pivot": [294.0, 171.5]}, "body": {"x": 74.2, "y": 9.4, "w": 330, "h": 273, "pivot": [196.0, 147.0]}, "leg_near": {"x": 226.1, "y": 166.6, "w": 110, "h": 105, "pivot": [266.0, 182.0]}, "arm_near": {"x": 58.1, "y": 159.6, "w": 115, "h": 90, "pivot": [155.8, 164.5]}, "wing_near": {"x": 191.8, "y": 11.9, "w": 214, "h": 160, "pivot": [210.0, 147.0]}, "halo": {"x": 84.3, "y": 31.1, "w": 68, "h": 37, "pivot": [117.2, 54.2]}}, "anchor": [196.0, 150.5], "W": 437, "H": 291};
+const faimg = {}; FALLEN.order.forEach(k=>{ const im = new Image(); im.src = "assets/fallen_" + k + ".png?v=121"; faimg[k] = im; });
+const FAS = 0.42;
+function drawFallen(ctx, x, y, t, ph){
+  if (!faimg.body.complete || !faimg.body.naturalWidth) return;
+  const w = t*10.25 + ph*3, beat = Math.sin(w), late = Math.sin(w - 1.3), drag = Math.sin(w - 2.1);   // Jerry's numbers, Sep 17
+  const ang = {
+    wing_near: -0.10 + 0.26*beat,
+    wing_far:  -0.10 + 0.26*0.85*Math.sin(w - 0.5),
+    arm_near:   0.26*Math.sin(w - 1.9),                                        // reaching, a beat behind the stroke
+    arm_far:    0.208*Math.sin(w - 2.3),
+    leg_near:   0.32*drag,                                                     // trailing, dragged behind the heave
+    leg_far:    0.256*Math.sin(w - 2.5),
+    halo:       0.06*Math.sin(w*0.5 - 0.15),                                   // the crown on the beat, a little late
+    body: 0 };
+  // the crown: a true delay behind the head's rise and fall, and a hover that only lifts it UP from its rest
+  const lift = { halo: 14*(Math.sin(w - 1.3 - 0.15) - late) - 2.5*(0.5 + 0.5*Math.sin(w*0.5 - 0.15)) };
+  ctx.save(); ctx.translate(x, y + 14*late); ctx.rotate(0.04*Math.sin(w - 0.9)); ctx.scale(FAS, FAS);
+  ctx.translate(-FALLEN.anchor[0], -FALLEN.anchor[1]);
+  for (const k of FALLEN.order){
+    const im = faimg[k]; if (!im.complete || !im.naturalWidth) continue;
+    const L = FALLEN.layers[k], pv = L.pivot;
+    ctx.save(); ctx.translate(pv[0], pv[1] + (lift[k] || 0)); ctx.rotate(ang[k] || 0); ctx.translate(-pv[0], -pv[1]);
+    ctx.drawImage(im, L.x, L.y); ctx.restore();
+  }
+  ctx.restore();
+}
+const abg = new Image(); let abready=false; abg.onload=()=>{abready=true;}; abg.src = "assets/ashfall_pano.jpg?v=279"; abg.loop = true;   // 827×672, drifts with parallax — baked seamless, tiled straight
+const bbg = new Image(); let bbready=false; bbg.onload=()=>{bbready=true;}; bbg.src = "assets/brimstone_pano.jpg?v=279"; bbg.loop = true; // 988×672, stitched from Grok's brimstone pan — baked seamless (bake_pano.py), tiled straight
+const hbg = new Image(); hbg.src = "assets/hive_pano.jpg?v=280"; hbg.loop = true;       // 1248×832, the drowned comb — baked seamless: tiled straight, not mirrored
+const dbg = new Image(); dbg.src = "assets/drowned_pano.jpg?v=280"; dbg.loop = true;    // 1248×832, the drowned forest — its water is the floor — baked seamless
+const pbg = new Image(); pbg.src = "assets/pit_pano.jpg?v=280"; pbg.loop = true;        // 1248×832, the frozen pit — baked seamless
+const PANO = [null, abg, bbg, hbg, dbg, pbg];                                    // the far country of each depth
+const PANO_DIM = [1, 1, 0.72, 1.0, 0.86, 0.92];                                 // (the two darkenings of 2026-09-26 taken out again: the blur alone does the job)                             // Depths II–VI held back a further ~18%: a tester found the backdrops distracting (2026-09-26)
+const cimg = new Image(); let cready=false; cimg.onload=()=>{cready=true;}; cimg.src = C.src;
+
+/* ============================ the fire floor (Grok clip, luma-keyed) ============================ */
+const vids = [document.getElementById("fireA"), document.getElementById("fireB")];
+vids.forEach(v=>{ v.src = "assets/fire1.mp4?v=121"; v.load(); });
+let fireOK = false, fireLead = 0, fireN = 0; const XF = 0.7;
+function startFire(){ if (fireOK) return; vids[0].play().then(()=>{ fireOK = true; }).catch(()=>{ fireOK = false; }); }
+startFire(); window.addEventListener("pointerdown", startFire);
+const fx = document.createElement("canvas"); fx.width = W; fx.height = H; const fxg = fx.getContext("2d");
+const SW = 240, SH = 174;
+const sm = document.createElement("canvas"); sm.width = SW; sm.height = SH; const smg = sm.getContext("2d", {willReadFrequently:true});
+function paintedFire(){
+  const a = vids[fireLead], b = vids[1-fireLead];
+  const dur = a.duration || 6, tA = a.currentTime;
+  let mix = 0;
+  if (tA > dur - XF){ if (b.paused){ b.currentTime = 0; b.play().catch(()=>{}); } mix = (tA - (dur - XF))/XF; }
+  if (a.ended || tA >= dur - 0.02){ a.pause(); fireLead = 1-fireLead; return paintedFire(); }
+  if (a.paused) a.play().catch(()=>{});
+  // the keying — a video frame pulled into a canvas and walked pixel by pixel — was the dearest thing in Depth I
+  // (10ms a frame on the Mac, far more on a phone), so it is done every OTHER frame; between, last frame's fire is shown
+  fireN++; if (fireN & 1){ g.save(); g.globalCompositeOperation = "lighter"; g.drawImage(fx, 0, 0); g.restore(); return; }
+  smg.clearRect(0,0,SW,SH);
+  const draw = (v, alpha)=>{ if (v.readyState < 2) return; smg.globalAlpha = alpha; smg.drawImage(v, 0, 250, 448, 346, 0, 0, SW, SH); };
+  draw(a, 1-mix); if (mix > 0) draw(b, mix); smg.globalAlpha = 1;
+  const id = smg.getImageData(0,0,SW,SH), d = id.data;
+  for (let i=0;i<d.length;i+=4){
+    const l = Math.max(d[i], d[i+1], d[i+2]);
+    const row = (i>>2)/SW|0, top = Math.min(1, row/48);
+    d[i+3] = l < 92 ? 0 : Math.min(255, (l-92)*2.3*top);
+    d[i+1] *= 0.55; d[i+2] *= 0.35;
+  }
+  smg.putImageData(id, 0, 0);
+  fxg.clearRect(0,0,W,H); fxg.drawImage(sm, 0, 0, SW, SH, 0, H-371, W, 371);
+  g.save(); g.globalCompositeOperation = "lighter"; g.globalAlpha *= 1; g.drawImage(fx, 0, 0); g.restore();
+}
+/* before the phone lets the clip play, a keyed still of the same fire stands in for it */
+const fstill = new Image(); let fsready=false; fstill.onload=()=>{fsready=true;}; fstill.src = "assets/fire_still.png?v=121";
+function stillFire(t){
+  if (!fsready) return;                          // nothing rather than the wrong fire
+  const br = 1 + 0.03*Math.sin(t*5.1) + 0.02*Math.sin(t*8.7+1);
+  g.save(); g.globalCompositeOperation = "lighter"; g.globalAlpha *= 0.92 + 0.08*Math.sin(t*6.3);
+  g.translate(0, H); g.scale(1, br); g.drawImage(fstill, 0, -371, W, 371); g.restore();
+}
+/* code fire, the last resort */
+let seed = 11; const rnd = ()=>{ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; };
+const flames = []; for (let i=0;i<26;i++) flames.push({x:rnd()*W, w:26+rnd()*40, h:90+rnd()*150, ph:rnd()*6.3, sp:0.8+rnd()*0.8, warm:rnd()});
+function codeFire(t){
+  g.save(); g.globalCompositeOperation = "lighter";
+  for (const f of flames){
+    const h = f.h*(0.8+0.25*Math.sin(t*f.sp*3+f.ph)), lick = 14*Math.sin(t*f.sp*2.2+f.ph);
+    const gr = g.createLinearGradient(0,H,0,H-h);
+    gr.addColorStop(0, f.warm<0.5 ? "rgba(255,70,26,0.6)" : "rgba(255,150,60,0.5)");
+    gr.addColorStop(0.55,"rgba(190,20,12,0.32)"); gr.addColorStop(1,"rgba(110,8,8,0)");
+    g.fillStyle = gr; g.beginPath(); g.moveTo(f.x-f.w, H+4);
+    g.quadraticCurveTo(f.x-f.w*0.9, H-h*0.45, f.x-f.w*0.2+lick*0.3, H-h*0.74);
+    g.quadraticCurveTo(f.x+lick, H-h*0.93, f.x+lick*1.2, H-h);
+    g.quadraticCurveTo(f.x+f.w*0.3+lick*0.4, H-h*0.58, f.x+f.w*0.8, H-h*0.28);
+    g.quadraticCurveTo(f.x+f.w, H-h*0.09, f.x+f.w, H+4); g.closePath(); g.fill();
+  }
+  g.restore();
+}
+
+/* ============================ backdrop, embers, tint ============================ */
+const bg = document.createElement("canvas"); bg.width = W; bg.height = H;
+{ const b = bg.getContext("2d");
+  const v = b.createLinearGradient(0,0,0,H); v.addColorStop(0,"#0C0508"); v.addColorStop(0.6,"#1C0709"); v.addColorStop(1,"#3A0A0A");
+  b.fillStyle = v; b.fillRect(0,0,W,H);
+  const w = b.createRadialGradient(W/2,H+60,0, W/2,H+60,560); w.addColorStop(0,"rgba(210,30,14,0.62)"); w.addColorStop(1,"rgba(210,30,14,0)");
+  b.fillStyle = w; b.fillRect(0,0,W,H); }
+const bg2 = document.createElement("canvas"); bg2.width = W; bg2.height = H;
+{ const b = bg2.getContext("2d");
+  const v = b.createLinearGradient(0,0,0,H); v.addColorStop(0,"#07060A"); v.addColorStop(0.55,"#120F18"); v.addColorStop(1,"#241E2C");
+  b.fillStyle = v; b.fillRect(0,0,W,H);
+}
+const bg3 = document.createElement("canvas"); bg3.width = W; bg3.height = H;
+{ const b = bg3.getContext("2d");
+  const v = b.createLinearGradient(0,0,0,H); v.addColorStop(0,"#06050A"); v.addColorStop(0.5,"#140E0C"); v.addColorStop(1,"#2E1A0A");
+  b.fillStyle = v; b.fillRect(0,0,W,H);
+  const f = b.createRadialGradient(W/2,H+40,0, W/2,H+40,520);                 // the furnace behind the gate
+  f.addColorStop(0,"rgba(226,150,26,0.50)"); f.addColorStop(0.55,"rgba(150,60,16,0.24)"); f.addColorStop(1,"rgba(150,60,16,0)");
+  b.fillStyle = f; b.fillRect(0,0,W,H); }
+const bg4 = document.createElement("canvas"); bg4.width = W; bg4.height = H;
+{ const b = bg4.getContext("2d");
+  const v = b.createLinearGradient(0,0,0,H); v.addColorStop(0,"#07050A"); v.addColorStop(0.5,"#17100A"); v.addColorStop(1,"#3A2408");
+  b.fillStyle = v; b.fillRect(0,0,W,H);
+  const f = b.createRadialGradient(W/2,H+30,0, W/2,H+30,540);                  // the comb glowing low down
+  f.addColorStop(0,"rgba(226,170,50,0.42)"); f.addColorStop(0.6,"rgba(150,92,18,0.18)"); f.addColorStop(1,"rgba(150,92,18,0)");
+  b.fillStyle = f; b.fillRect(0,0,W,H); }
+const bg5 = document.createElement("canvas"); bg5.width = W; bg5.height = H;
+{ const b = bg5.getContext("2d");
+  const v = b.createLinearGradient(0,0,0,H); v.addColorStop(0,"#050907"); v.addColorStop(0.5,"#0A1410"); v.addColorStop(1,"#122218");
+  b.fillStyle = v; b.fillRect(0,0,W,H);
+  const f = b.createRadialGradient(W/2,H*0.42,0, W/2,H*0.42,420);                // the sick light through the cloud
+  f.addColorStop(0,"rgba(120,160,110,0.22)"); f.addColorStop(1,"rgba(120,160,110,0)");
+  b.fillStyle = f; b.fillRect(0,0,W,H); }
+const bg6 = document.createElement("canvas"); bg6.width = W; bg6.height = H;
+{ const b = bg6.getContext("2d");
+  const v = b.createLinearGradient(0,0,0,H); v.addColorStop(0,"#020306"); v.addColorStop(0.5,"#05080E"); v.addColorStop(1,"#0A1220");
+  b.fillStyle = v; b.fillRect(0,0,W,H);
+  const f = b.createRadialGradient(W/2,H*0.95,0, W/2,H*0.95,460);                // the cold light coming up through the ice
+  f.addColorStop(0,"rgba(90,140,190,0.20)"); f.addColorStop(1,"rgba(90,140,190,0)");
+  b.fillStyle = f; b.fillRect(0,0,W,H); }
+const BGS = [bg, bg2, bg3, bg4, bg5, bg6];
+const sparks = []; for (let i=0;i<84;i++) sparks.push({x:rnd()*W, y:rnd()*H, r:0.7+rnd()*1.6, v:26+rnd()*54, ph:rnd()*6.3});
+function drawSparks(t, k){
+  if (k <= 0) return;
+  g.save(); g.globalCompositeOperation = "lighter";
+  for (const e of sparks){ const y = ((e.y - t*e.v) % H + H) % H, x = e.x + 16*Math.sin(t*0.5+e.ph);
+    g.globalAlpha = k*(0.20 + 0.45*Math.abs(Math.sin(t*1.7+e.ph)))*(y/H);
+    g.fillStyle = "#FF8A2C"; g.beginPath(); g.arc(x, y, e.r, 0, 7); g.fill(); }
+  g.restore();
+}
+const motes = []; for (let i=0;i<64;i++) motes.push({x:rnd()*W, y:rnd()*H, r:0.8+rnd()*1.9, v:10+rnd()*26, ph:rnd()*6.3});
+function drawMotes(t, k){                                                       // flecks of comb drifting in the dark
+  if (k <= 0) return;
+  g.save(); g.globalCompositeOperation = "lighter";
+  for (const e of motes){ const y = ((e.y + t*e.v) % H + H) % H, x = e.x + 22*Math.sin(t*0.4+e.ph);
+    g.globalAlpha = k*(0.16 + 0.34*Math.abs(Math.sin(t*1.1+e.ph)));
+    g.fillStyle = "#E8A93C"; g.beginPath(); g.arc(x, y, e.r, 0, 7); g.fill(); }
+  g.restore();
+}
+const spores = []; for (let i=0;i<70;i++) spores.push({x:rnd()*W, y:rnd()*H, r:1.0+rnd()*2.2, v:12+rnd()*28, ph:rnd()*6.3});
+function drawSpores(t, k){                                                      // Depth V's weather rises: spores off the rot
+  if (k <= 0) return;
+  g.save(); g.globalCompositeOperation = "lighter";
+  for (const e of spores){ const y = ((e.y - t*e.v) % H + H) % H, x = e.x + 26*Math.sin(t*0.35+e.ph);
+    g.globalAlpha = k*(0.10 + 0.30*Math.abs(Math.sin(t*0.9+e.ph)));
+    g.fillStyle = "#B9D9A8"; g.beginPath(); g.arc(x, y, e.r, 0, 7); g.fill(); }
+  g.restore();
+}
+const frost = []; for (let i=0;i<90;i++) frost.push({x:rnd()*W, y:rnd()*H, r:0.7+rnd()*1.5, v:9+rnd()*16, ph:rnd()*6.3});
+function drawFrost(t, k){                                                       // Depth VI's weather barely falls: frost, almost still
+  if (k <= 0) return;
+  g.save(); g.globalCompositeOperation = "lighter";
+  for (const e of frost){ const y = ((e.y + t*e.v) % H + H) % H, x = e.x + 10*Math.sin(t*0.25+e.ph);
+    g.globalAlpha = k*(0.12 + 0.30*Math.abs(Math.sin(t*0.7+e.ph)));
+    g.fillStyle = "#CFE4F5"; g.beginPath(); g.arc(x, y, e.r, 0, 7); g.fill(); }
+  g.restore();
+}
+function drawIce(t, k){                                                         // the black ice he must not touch: still, with light in the cracks
+  if (k <= 0) return;
+  const top = T.fireLine - 36;
+  g.save(); g.globalAlpha = k;
+  const gr = g.createLinearGradient(0, top, 0, H);
+  gr.addColorStop(0, "rgba(3,6,12,0)"); gr.addColorStop(0.3, "rgba(3,6,12,0.62)"); gr.addColorStop(1, "rgba(2,4,9,0.95)");
+  g.fillStyle = gr; g.fillRect(0, top, W, H - top);
+  g.globalCompositeOperation = "lighter";                                       // the cracks: fixed to the ice, they scroll with it, and breathe
+  for (let i=0;i<9;i++){ const x = ((i*173 - panoX*2.4) % (W + 260) + W + 260) % (W + 260) - 130, y = top + 40 + (i*53)%110;
+    g.globalAlpha = k*(0.06 + 0.06*Math.sin(t*0.9 + i)); g.strokeStyle = "#9FD0FF"; g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + 40, y + 18); g.lineTo(x + 95, y + 6); g.lineTo(x + 130, y + 30); g.stroke(); }
+  g.restore();
+}
+function drawWater(t, k){                                                       // the black water he must not touch: it lies where the fire lay
+  if (k <= 0) return;
+  const top = T.fireLine - 36;
+  g.save(); g.globalAlpha = k;
+  const gr = g.createLinearGradient(0, top, 0, H);
+  gr.addColorStop(0, "rgba(3,9,7,0)"); gr.addColorStop(0.3, "rgba(3,9,7,0.6)"); gr.addColorStop(1, "rgba(2,6,5,0.94)");
+  g.fillStyle = gr; g.fillRect(0, top, W, H - top);
+  g.globalCompositeOperation = "lighter";                                       // and a little light lying on it, sliding
+  for (let i=0;i<7;i++){ const y = top + 34 + i*17 + 3*Math.sin(t*0.8 + i), x = ((t*(14 + i*5) + i*97) % (W + 220)) - 110;
+    g.globalAlpha = k*0.09; g.fillStyle = "#9FC7A0"; g.fillRect(x, y, 70 + i*12, 1.2); }
+  g.restore();
+}
+const ash = []; for (let i=0;i<140;i++) ash.push({x:rnd()*W, y:rnd()*H, len:5+rnd()*14, v:40+rnd()*70, ph:rnd()*6.3});
+function drawFar(far, alpha){                                                   // a panorama, mirror-tiled so it never runs out
+  if (!far || alpha <= 0 || !far.complete || !far.naturalWidth) return;
+  const pw = far.width, ph = far.height, off = ((panoX % (2*pw)) + 2*pw) % (2*pw);
+  g.save(); g.globalAlpha = alpha;
+  // tiles land on whole pixels and overlap by one: at a fractional x the canvas feathers both edges against the
+  // dark behind, and a hairline runs the full height of the screen where they meet (Jerry saw it on the comb)
+  const ox = Math.round(off);
+  for (let k=-1;k<=2;k++){ const x0 = k*pw - ox; const mirror = !far.loop && ((k % 2) + 2) % 2 === 1;   // a painting baked to loop is never reflected: a mirror folds its landmarks nose to nose
+    // exact width, whole pixels: the old one-pixel overlap stretched every tile by a pixel, and the shifted texture
+    // met its neighbour as a faint full-height line (Jerry saw it on the brimstone)
+    g.save(); if (mirror){ g.translate(x0 + pw, H - ph); g.scale(-1, 1); g.drawImage(far, 0, 0); } else g.drawImage(far, x0, H - ph); g.restore(); }
+  g.restore();
+}
+function drawAsh(t, k){
+  if (k <= 0) return;
+  g.save(); g.strokeStyle = "#C4BAD2"; g.lineWidth = 1.2;
+  for (const a of ash){ const y = ((a.y + t*a.v) % H + H) % H, x = a.x + 12*Math.sin(t*0.7+a.ph);
+    g.globalAlpha = k*(0.16 + 0.4*Math.abs(Math.sin(t*1.3+a.ph))); g.beginPath(); g.moveTo(x,y); g.lineTo(x-2.5, y+a.len); g.stroke(); }
+  g.restore();
+}
+const embers = []; for (let i=0;i<60;i++) embers.push({x:rnd()*W, y:rnd()*H, r:0.6+rnd()*1.6, v:14+rnd()*30, ph:rnd()*6.3});
+function drawEmbers(t){
+  g.save(); g.globalCompositeOperation = "lighter"; g.fillStyle = "#FF7A50";
+  for (const e of embers){ const y = ((e.y - t*e.v) % H + H) % H, x = e.x + 6*Math.sin(t+e.ph);
+    g.globalAlpha = 0.3 + 0.5*Math.abs(Math.sin(t*2+e.ph)); g.beginPath(); g.arc(x, y, e.r, 0, 7); g.fill(); }
+  g.restore();
+}
+const world = document.createElement("canvas"); world.width = W; world.height = H; const wg = world.getContext("2d");
+const hero  = document.createElement("canvas"); hero.width = W;  hero.height = H;  const hg = hero.getContext("2d");
+/* the monsters get their own layer: in the world layer the depth's colour swallowed them,
+   dark red on dark red. Here they take only a third of it and stand out against the place. */
+const mon = document.createElement("canvas"); mon.width = W; mon.height = H; const mg = mon.getContext("2d");
+const PAL = [
+  { lo:[235,52,22], mid:[178,30,26], hi:[70,10,26],  glow:[255,96,40] },       // I: blood
+  { lo:[150,140,170], mid:[110,100,130], hi:[40,34,52], glow:[190,180,210] },  // II: ash
+  { lo:[214,128,30], mid:[118,52,22], hi:[30,22,20], glow:[255,188,66] },      // III: sulphur on iron
+  { lo:[232,168,54], mid:[132,74,20], hi:[26,18,12], glow:[255,206,110] },     // IV: old honey
+  { lo:[64,118,66], mid:[26,56,36], hi:[6,16,10], glow:[150,205,130] },         // V: mould — dark: the wood must stay black under it
+  { lo:[96,130,168], mid:[28,42,64], hi:[3,5,10], glow:[150,190,230] }          // VI: black ice, lit from within
+];
+let VEIL4 = 0.22, POOLA = 0.85, SOULFADE = 0.17, DS1 = 0.365, SOLID = true;                          // how far the comb's bright sky is sunk into the dark
+const TINT = [0.52, 0.52, 0.52, 0.32, 0.22, 0.20];   // V lighter still: the jelly is the colour, the tint must not dull it      // Depth IV is already gold: a lighter hand, so the char stays black
+function mixc(a, b, k){ return a.map((v,i)=>Math.round(v + (b[i]-v)*k)); }
+function tint(ctx, amount, t){
+  if (amount <= 0) return;
+  const P = PAL[depth], Q = PAL[Math.max(0, depth-1)], k = 1 - wmix;          // wmix: how far into the new world we are
+  const lo = mixc(P.lo, Q.lo, k), mid = mixc(P.mid, Q.mid, k), hi = mixc(P.hi, Q.hi, k), gl = mixc(P.glow, Q.glow, k);
+  const fl = 0.72 + 0.28*(0.5 + 0.5*Math.sin(t*9.1) * 0.5 + 0.5*Math.sin(t*13.7+1.3) * 0.3 + 0.2*Math.sin(t*5.3+2.1));
+  const a  = Math.min(1, amount*fl), lift = 0.12*Math.sin(t*7.3);
+  const gr = ctx.createLinearGradient(0,H,0,0);
+  gr.addColorStop(0, `rgba(${lo},${a})`); gr.addColorStop(0.45+lift*0.5, `rgba(${mid},${a*0.9})`); gr.addColorStop(1, `rgba(${hi},${a*0.8})`);
+  ctx.save(); ctx.globalCompositeOperation = "source-atop"; ctx.fillStyle = gr; ctx.fillRect(0,0,W,H); ctx.restore();
+  const g2 = ctx.createLinearGradient(0,H,0,H*0.45);
+  g2.addColorStop(0, `rgba(${gl},${a*0.5*(0.6+0.4*Math.sin(t*11.3+0.7))})`); g2.addColorStop(1, `rgba(${gl},0)`);
+  ctx.save(); ctx.globalCompositeOperation = "source-atop"; ctx.fillStyle = g2; ctx.fillRect(0,0,W,H); ctx.restore();
+}
+
+/* ============================ drawing the pieces ============================ */
+function column(x, gapEdge, down){
+  const s = T.colScale;
+  wg.save(); wg.translate(x, gapEdge); if (!down) wg.scale(1,-1); wg.translate(-C.w*s/2, 0);
+  const need = (down ? H - gapEdge : gapEdge)/s;
+  wg.drawImage(cimg, 0, 0, C.w, Math.min(C.h, need), 0, 0, C.w*s, Math.min(C.h, need)*s);
+  let y = C.h; const sh = C.slice[1]-C.slice[0];
+  while (y < need){ const hh = Math.min(sh, need-y); wg.drawImage(cimg, 0, C.slice[0], C.w, hh, 0, y*s, C.w*s, hh*s); y += hh; }
+  wg.restore();
+}
+/* a piece that has to reach further than its painting is long is STRETCHED, up to 1.6×, before anything is
+   tiled — the tiled slice band read as a copy pasted on top of itself (Jerry, the jelly on a dive). Only past
+   that stretch is the slice band repeated, which is rare. The collision test walks the same stretch. */
+const STRETCH_MAX = 1.6;
+function pieceStretch(S, need){ return Math.max(1, Math.min(S.smax || STRETCH_MAX, need/S.h)); }   // (smax: a set that would rather stretch than tile — the goo and stumps of Depth V, Jerry, 2026-09-25)
+function spire(x, gapEdge, down, S, fat){
+  if (!S.ready) return;
+  const s = S.s, sx = s*fat;
+  wg.save(); wg.translate(x, gapEdge); if (!down) wg.scale(1,-1); wg.translate(-S.tipx*sx, 0);   // the tip is what points at the gap
+  const need = (down ? H - gapEdge : gapEdge)/s, k = pieceStretch(S, need), hk = S.h*k;
+  wg.drawImage(S.img, 0, 0, S.w, Math.min(S.h, need/k), 0, 0, S.w*sx, Math.min(hk, need)*s);
+  let y = hk; const sh = S.slice[1]-S.slice[0];
+  while (y < need){ const hh = Math.min(sh, need-y); wg.drawImage(S.img, 0, S.slice[0], S.w, hh, 0, y*s, S.w*sx, hh*s); y += hh; }
+  wg.restore();
+}
+function drawPair(c){
+  if (c.sp){ spire(c.x, c.cy - T.gap/2, false, c.sp, c.fat); if (!c.dive) spire(c.x, c.cy + T.gap/2, true, c.sp2 || c.sp, c.fat); }
+  else { column(c.x, c.cy - T.gap/2, false); if (!c.dive) column(c.x, c.cy + T.gap/2, true); }
+}
+/* does his body touch this piece? The piece is drawn from the gap edge outward (flipped for the top one) and
+   tiled past its own height from its slice band; this walks the same transform back to the image and reads
+   its alpha. Nine points on his body circle, so a tip has to be genuinely there to catch him. */
+function pieceAlpha(S){
+  if (S.alpha) return S.alpha;
+  const cv = document.createElement("canvas"); cv.width = S.w; cv.height = S.h;
+  const cx = cv.getContext("2d", { willReadFrequently: true }); cx.drawImage(S.img, 0, 0);
+  const d = cx.getImageData(0, 0, S.w, S.h).data, a = new Uint8Array(S.w*S.h);
+  for (let i=0;i<a.length;i++) a[i] = d[i*4+3];
+  return (S.alpha = a);
+}
+function pieceHits(S, x, gapEdge, down, fat, px, py, rad){
+  if (!S.ready) return false;
+  const s = S.s || 1, sx = s*fat, a = pieceAlpha(S), r = rad || T.bodyR*0.8, sl = S.slice[1] - S.slice[0];
+  const need = (down ? H - gapEdge : gapEdge)/s, st = pieceStretch(S, need), hk = S.h*st;   // the same stretch the draw used
+  for (let k=0;k<9;k++){
+    const ang = k*0.785, qx = k ? px + Math.cos(ang)*r : px, qy = k ? py + Math.sin(ang)*r : py;
+    const lx = (qx - x)/sx + S.tipx; let ly = down ? (qy - gapEdge)/s : (gapEdge - qy)/s;
+    if (lx < 0 || lx >= S.w || ly < 0) continue;
+    if (ly < hk) ly = ly/st; else ly = S.slice[0] + ((ly - hk) % sl);
+    if (a[(ly|0)*S.w + (lx|0)] > 120) return true;
+  }
+  return false;
+}
+function pairHalf(c){                                       // how wide it is where it can hit you
+  if (c.sp){ const one = S => { const sh = S.shaft; return Math.min(sh[1]-sh[0], S.tipw*1.3)/2*S.s*c.fat*0.8; };
+    return Math.max(one(c.sp), one(c.sp2 || c.sp)); }   // judged near the tip, where you meet it
+  return C.w*T.colScale/2 - 6;
+}
+/* The soul sheets end in a straight cut at the hem, which reads as a hard edge on the ground.
+   Each frame is redrawn here with its lowest band faded out, so she sinks into the dark instead. */
+/* Every frame she is drawn in is composed ONCE and kept (a hundred small canvases at most). Composing on the fly with a
+   one-frame cache meant two dozen kneeling souls at different phases recomposed nearly all of them every frame — five
+   gradient fills each — which is what dragged the phone to 30 fps as the Amalgam came in (2026-09-23). */
+const SOUL_FRAMES = new Map();
+function soulFrame(Sk, fi){
+  const key = Sk.src + "#" + fi, hit = SOUL_FRAMES.get(key); if (hit) return hit;
+  const soulPad = document.createElement("canvas"), spg = soulPad.getContext("2d");
+  soulPad.width = Sk.w; soulPad.height = Sk.h; SOUL_FRAMES.set(key, soulPad);
+  spg.globalCompositeOperation = "source-over";
+  spg.drawImage(Sk.img, fi*Sk.w, 0, Sk.w, Sk.h, 0, 0, Sk.w, Sk.h);
+  spg.globalCompositeOperation = "destination-out";
+  // the hem, cut square when she was lifted off the sheet
+  const fade = Math.round(Sk.h*SOULFADE), y0 = Sk.h - fade;
+  const gr = spg.createLinearGradient(0, y0, 0, Sk.h);
+  gr.addColorStop(0, "rgba(0,0,0,0)"); gr.addColorStop(0.55, "rgba(0,0,0,0.65)"); gr.addColorStop(1, "rgba(0,0,0,1)");
+  spg.fillStyle = gr; spg.fillRect(0, y0, Sk.w, fade);
+  // the pooled robe runs off the bottom-left corner as a solid bar: wash that corner out
+  const cr = Sk.w*0.78, cg = spg.createRadialGradient(0, Sk.h, 0, 0, Sk.h, cr);
+  cg.addColorStop(0, "rgba(0,0,0,1)"); cg.addColorStop(0.45, "rgba(0,0,0,0.72)"); cg.addColorStop(1, "rgba(0,0,0,0)");
+  spg.fillStyle = cg; spg.beginPath(); spg.arc(0, Sk.h, cr, 0, 7); spg.fill();
+  // and the frame's own borders — soul2 carries a fully opaque column down its left edge in every frame
+  const e = 9;
+  const L = spg.createLinearGradient(0, 0, e, 0);
+  L.addColorStop(0, "rgba(0,0,0,1)"); L.addColorStop(1, "rgba(0,0,0,0)");
+  spg.fillStyle = L; spg.fillRect(0, 0, e, Sk.h);
+  const R = spg.createLinearGradient(Sk.w, 0, Sk.w-e, 0);
+  R.addColorStop(0, "rgba(0,0,0,1)"); R.addColorStop(1, "rgba(0,0,0,0)");
+  spg.fillStyle = R; spg.fillRect(Sk.w-e, 0, e, Sk.h);
+  const Tg = spg.createLinearGradient(0, 0, 0, e);
+  Tg.addColorStop(0, "rgba(0,0,0,1)"); Tg.addColorStop(1, "rgba(0,0,0,0)");
+  spg.fillStyle = Tg; spg.fillRect(0, 0, Sk.w, e);
+  spg.globalCompositeOperation = "source-over";
+  return soulPad;
+}
+const spring = (k, c) => ({ a:0, v:0, k, c, step(target, dt){ this.v += (this.k*(target-this.a) - this.c*this.v)*dt; this.a += this.v*dt; return this.a; },
+  reset(){ this.a = 0; this.v = 0; } });
+const S = { tilt:spring(40,9), cape:spring(50,7), legs:spring(80,10), head:spring(120,13), headY:spring(90,9) };
+
+
+/* ============================ Depth VI: the Amalgam ============================
+   The boss is the rig from bosstest.html, frozen at Jerry's numbers. It stands on the pit floor at the right;
+   the world stops; he must push forward through the claws to put the blade on its body and heads. */
+const BOSS_RIG = {"scale": 0.45, "order": ["wing_arm", "wing_hand", "hwings", "arm1", "arm1_hand", "arm_b", "arm_b_hand", "arm_d", "arm_d_hand", "body", "thead", "jaw_toad", "vbird", "vhead", "beak", "cluster", "jaw_fallen", "jaw_fish", "foot"], "layers": {"wing_arm": {"x": 211.3, "y": 86.4, "w": 104, "h": 104, "pivot": [310.5, 180.0], "parent": null, "rest": 0.25}, "wing_hand": {"x": -8.9, "y": 34.9, "w": 329, "h": 225, "pivot": [219.8, 87.9], "parent": "wing_arm", "rest": 0.0}, "hwings": {"x": 251.1, "y": -19.7, "w": 171, "h": 126, "pivot": [270.0, 101.2], "parent": null, "rest": 0.0}, "arm1": {"x": 54.0, "y": 72.9, "w": 85, "h": 70, "pivot": [135.0, 117.9], "parent": null, "rest": 0.0}, "arm1_hand": {"x": 26.6, "y": 68.4, "w": 51, "h": 61, "pivot": [70.7, 92.2], "parent": "arm1", "rest": 0.0}, "arm_b": {"x": 106.8, "y": 181.7, "w": 80, "h": 49, "pivot": [180.0, 211.5], "parent": null, "rest": 0.0}, "arm_b_hand": {"x": 34.0, "y": 175.6, "w": 82, "h": 37, "pivot": [113.9, 192.6], "parent": "arm_b", "rest": 0.0}, "arm_d": {"x": 101.4, "y": 278.8, "w": 117, "h": 74, "pivot": [211.5, 292.5], "parent": null, "rest": 0.0}, "arm_d_hand": {"x": 67.1, "y": 336.5, "w": 62, "h": 74, "pivot": [135.9, 358.7], "parent": "arm_d", "rest": 0.0}, "body": {"x": 105.8, "y": 2.7, "w": 585, "h": 458, "pivot": [315.0, 270.0], "parent": null, "rest": 0.0}, "thead": {"x": 106.2, "y": 95.0, "w": 140, "h": 91, "pivot": [238.5, 148.5], "parent": null, "rest": 0.0}, "jaw_toad": {"x": 109.8, "y": 156.2, "w": 73, "h": 29, "pivot": [180.0, 160.2], "parent": "thead", "rest": 0.0}, "vbird": {"x": 159.3, "y": 0.1, "w": 78, "h": 76, "pivot": [212.7, 66.3], "parent": null, "rest": 0.0}, "vhead": {"x": 119.7, "y": 3.9, "w": 55, "h": 47, "pivot": [164.1, 40.3], "parent": "vbird", "rest": 0.0}, "beak": {"x": 129.6, "y": 37.9, "w": 20, "h": 12, "pivot": [149.4, 41.2], "parent": "vhead", "rest": 0.0}, "cluster": {"x": 120.1, "y": 8.1, "w": 240, "h": 160, "pivot": [224.6, 158.4], "parent": null, "rest": 0.0}, "jaw_fallen": {"x": 198.1, "y": 112.6, "w": 18, "h": 14, "pivot": [213.2, 114.0], "parent": null, "rest": 0.0}, "jaw_fish": {"x": 155.2, "y": 203.4, "w": 64, "h": 27, "pivot": [214.2, 206.1], "parent": null, "rest": 0.0}, "foot": {"x": 126.9, "y": 355.5, "w": 187, "h": 98, "pivot": [252.0, 382.5], "parent": null, "rest": 0.0}}, "anchor": [315.0, 270.0], "W": 691, "H": 461};
+const BK = { rate:4, heave:7, pitch:0.015, blunge:0.09, bevery:7, wrest:0.25, hrest:0, wing:0.12, every:4, arc:-1.3, levery:5, lunge:0.25,
+             bang:-0.45, hang2:0.46, hstrike:0.5, hdlag:0.06, bob:0.03, hlag:0.12, hwang:-1.42, buzz:0.21, brate:7, reach:0.14, spread:0.35, clag:0.1,
+             hang:0, harc:1.25, hev:3.1, hwhip:0.7, mang:-0.16, marc:1.2, mev:4.7, mwhip:0.7, lang:0.19, larc:0.75, lev:6.3, lwhip:0.7, lhand:0.53,
+             ftilt:-0.14, snarl:0.46, srate:7.75 };
+const amimg = {}; let bready = 0;
+for (const k of BOSS_RIG.order){ const im = new Image(); im.onload = ()=>{ bready++; }; im.src = "assets/boss_" + k + ".png?v=151"; amimg[k] = im; }
+let BOSS_S = 1.3, BOSS_FRONT = 250, BOSS_FLOOR = T.fireLine + 70;                  // scale; where its snout stands; where its foot stands
+const BOSS_HIT  = ["body","thead","jaw_toad","jaw_fish","cluster","vbird","vhead","arm1","arm_b","wing_arm","arm1_hand","arm_b_hand"];
+const BOSS_OFF  = ["arm_d","arm_d_hand"];                                            // the low arm is out of the game: it walled off the belly
+const BOSS_WALL = ["body","thead","jaw_toad","jaw_fish","cluster","vbird","vhead","foot"];   // what he cannot fly through: the trunk and the heads — the claws hurt, they do not wall
+const bsolid = document.createElement("canvas"); bsolid.width = W; bsolid.height = H; const bsg = bsolid.getContext("2d", { willReadFrequently: true });
+const BOSS_HURT = ["arm1_hand","arm_b_hand"];                           // and the wing's hand while it slashes, the beak while it lunges
+T.bossAfter = 60; T.bossHP = 40; T.bossHit = 45; T.fightPush = 760; T.fightVmax = 760; T.fightDrag = 4.5; T.fightHome = 14; T.fightHomeX = 0.27; T.fightFloat = 0.28; T.fightFlap = 0.72;   // the recoil is hard: back past his start, floating, then the drop   // a tap is a lunge: ~65px forward, then he recoils back and down until the next
+const RNG=(seed)=>{ let s=seed>>>0; return ()=>{ s=(s*1664525+1013904223)>>>0; return s/4294967296; }; };
+class Clock{ constructor(seed){ this.seed=seed; this.every=null; this.times=[]; }
+  since(t, every){
+    if (every!==this.every){ this.every=every; this.rng=RNG(this.seed); this.times=[-every*this.rng()]; }
+    while (this.times[this.times.length-1] <= t) this.times.push(this.times[this.times.length-1] + every*(0.55+0.9*this.rng()));
+    let i=this.times.length-1; while (i>0 && this.times[i]>t) i--;
+    return t - this.times[i]; } }
+const BCLK={wing:new Clock(11), lunge:new Clock(23), h:new Clock(31), m:new Clock(47), l:new Clock(59), body:new Clock(71)};
+const bease=(f)=> f*f*(3-2*f);
+function bpulse(t, every, lag, down, up, clock, soft){
+  const u = clock.since(t - lag, every); let f = 0;
+  if (u < down) f = u/down; else if (u < down+up) f = 1 - (u-down)/up;
+  return soft ? bease(f) : f; }
+const bslash=(t,lag)=> BK.arc*bpulse(t,BK.every,lag,0.22,0.53,BCLK.wing);
+const blunge=(t,lag)=> BK.lunge*bpulse(t,BK.levery,lag,0.3,0.6,BCLK.lunge);
+const bbody=(t)=> BK.blunge*bpulse(t,BK.bevery,0,0.45,0.9,BCLK.body,true);
+const BARMS={arm1:['h',0.0], arm_b:['m',1.3], arm_d:['l',2.9]};
+const barmSlash=(k,t,lag)=>{ const [a,ph]=BARMS[k]; return -BK[a+'arc']*bpulse(t,BK[a+'ev'],ph+lag,0.18,0.5,BCLK[a]); };
+const bclaw=(k,t)=> BK[BARMS[k][0]+'whip']*barmSlash(k,t,BK.clag);
+const bsnarl=(t, rate, ph)=> BK.snarl*(0.5+0.5*Math.sin(t*rate+ph)) * (0.6+0.4*Math.sin(t*rate*0.37+ph*2)) * (0.7+0.3*Math.sin(t*rate*0.131+ph*3));
+function bossAngles(t){
+  const w=t*BK.rate, arm=(ph)=> BK.reach*Math.sin(w*0.5 + ph*BK.spread), sl=bslash(t,0), slh=bslash(t,BK.hlag);
+  return { body:0,
+    wing_arm: BK.wrest + BK.wing*Math.sin(w*0.5-0.6) + sl, wing_hand: BK.hrest + 0.5*BK.wing*Math.sin(w*0.5-1.4) + 0.6*slh,
+    hwings: BK.hwang + BK.buzz*Math.sin(w*BK.brate),
+    arm1: BK.hang+arm(0)+barmSlash('arm1',t,0), arm_b: BK.mang+arm(1)+barmSlash('arm_b',t,0), arm_d: BK.lang+arm(3)+barmSlash('arm_d',t,0),
+    arm1_hand: bclaw('arm1',t), arm_b_hand: bclaw('arm_b',t), arm_d_hand: BK.lhand + bclaw('arm_d',t),
+    thead: BK.ftilt + 0.02*Math.sin(w*0.5+0.7),
+    jaw_toad: -0.7*bsnarl(t,BK.srate,0), jaw_fish: -bsnarl(t,BK.srate*1.3,2.1),
+    beak: -bsnarl(t,BK.srate*1.7,4.0)*1.6, jaw_fallen: -bsnarl(t,BK.srate*2.2,1.0)*1.8,
+    vbird: BK.bang + BK.bob*Math.sin(w*0.5+0.4) - blunge(t,0), vhead: BK.hang2 + 0.6*BK.bob*Math.sin(w*0.5-0.5) - BK.hstrike*blunge(t,BK.hdlag),
+    _slash: sl, _lunge: blunge(t,0), _heave: BK.heave*Math.sin(w-1.2), _pitch: BK.pitch*Math.sin(w-0.9), _bl: bbody(t) };
+}
+/* draws it and, on the way, records every piece's box on screen — the blade and his body are tested against those */
+function drawBoss(ctx, b, only){
+  if (bready < BOSS_RIG.order.length || b.phase === "gone") return;                // gone is gone
+  const R = BOSS_RIG, ang = bossAngles(b.t), s = BOSS_S, fp = R.layers.foot.pivot, boxes = {};
+  const shake = b.phase === "dying" ? (Math.random()-0.5)*10 : 0, recoil = Math.max(0, 1 - (b.t - b.hurtT)/0.18)*7;
+  ctx.save(); ctx.translate(b.x + shake + recoil, b.y + shake*0.4); ctx.scale(s, s);
+  if (b.phase === "dying"){ const k = Math.min(1, (b.t - b.dieT)/2.6); ctx.globalAlpha = 1 - k*k; }                 // it shakes and goes; it does not sink
+  for (const k of R.order){
+    const im = amimg[k], L = R.layers[k], p = L.pivot, par = L.parent; if (!im.naturalWidth || BOSS_OFF.includes(k) || (only && !only.includes(k))) continue;
+    ctx.save();
+    if (k !== "foot"){ ctx.translate(0, ang._heave/s); ctx.translate(R.anchor[0],R.anchor[1]); ctx.rotate(ang._pitch); ctx.translate(-R.anchor[0],-R.anchor[1]);
+      ctx.translate(fp[0]-R.anchor[0],fp[1]-R.anchor[1]); ctx.rotate(-ang._bl); ctx.translate(-(fp[0]-R.anchor[0]),-(fp[1]-R.anchor[1])); }
+    ctx.translate(-R.anchor[0],-R.anchor[1]);
+    const chain=[]; for (let q=par; q; q=R.layers[q].parent) chain.unshift(q);
+    for (const anc of chain){ const q=R.layers[anc].pivot; ctx.translate(q[0],q[1]); ctx.rotate(ang[anc]||0); ctx.translate(-q[0],-q[1]); }
+    ctx.translate(p[0],p[1]); ctx.rotate(ang[k]||0); ctx.translate(-p[0],-p[1]);
+    if (k === "hwings") ctx.globalAlpha *= 0.92;
+    ctx.drawImage(im, L.x, L.y);
+    const m = ctx.getTransform(); let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;                 // the piece's box on screen
+    for (const [cx,cy] of [[L.x,L.y],[L.x+L.w,L.y],[L.x,L.y+L.h],[L.x+L.w,L.y+L.h]]){
+      const X = m.a*cx + m.c*cy + m.e, Y = m.b*cx + m.d*cy + m.f; x0=Math.min(x0,X); y0=Math.min(y0,Y); x1=Math.max(x1,X); y1=Math.max(y1,Y); }
+    boxes[k] = { x0, y0, x1, y1 };
+    ctx.restore();
+  }
+  ctx.restore();
+  if (only) return;
+  b.boxes = boxes; b.slash = ang._slash; b.lunge = ang._lunge;
+  // no white flinch (Jerry): the hit reads at the point of the blade — sparks, and a spatter of its green blood
+}
+/* is there monster paint in this strip of the monster layer? returns the first solid x, or false */
+function bossSolidAt(x, y, w, h, wall){
+  x = Math.round(x); y = Math.round(y); w = Math.max(1, Math.round(w)); h = Math.max(1, Math.round(h));
+  if (x < 0 || y < 0 || x + w > W || y + h > H) return false;
+  const d = (wall ? bsg : mg).getImageData(x, y, w, h).data;
+  for (let i = 3; i < d.length; i += 4) if (d[i] > 60) return x + ((i >> 2) % w);
+  return false; }
+function startBoss(){
+  boss = { x: W + 1000, y: BOSS_FLOOR - (BOSS_RIG.H - BOSS_RIG.anchor[1])*BOSS_S, t: 0, phase: "enter", hp: T.bossHP, hurtT: -9, hitT: -9, ouchT: -9, dieT: 0, boxes: null, soulT: -99 };
+  // it comes with a sea of souls kneeling about it — the creep gathering he sees as he approaches; they ride in with the world
+  for (const p of bossSouls(SOUL_LAYOUT)) souls.push({ x: boss.x - bossStation() + p.x, y: p.y, sc: p.sc, front: !!p.front, state:"wait", t0:0, ph:Math.random()*6, kind: SOULS[p.kind ?? (Math.random()<0.5?0:1)] });
+  M.vx = 0; }
+/* the floor recedes: a soul at depth d (0 = the front row, 1 = the back) sits higher, smaller, and drifts toward
+   the vanishing point. Screen positions are for the boss AT ITS STATION; startBoss shifts them to ride in with it. */
+let SOUL_LAYOUT = "B";                                     // Jerry chose B; three more kneel at its toes, drawn over it
+function soulAt(u, d){ const VX = 300, yF = T.fireLine + 72, yB = T.fireLine + 10, sF = 0.56, sB = 0.36;
+  return { x: VX + (u - VX)*(1 - 0.30*d), y: yF + (yB - yF)*d, sc: sF + (sB - sF)*d }; }
+function bossSouls(kind){
+  const out = [], j = (a) => (Math.random()-0.5)*a;
+  if (kind === "A"){                                     // the class: three rows of four before the snout, and a short trail in from the left
+    for (let i = 0; i < 12; i++){ const r = i % 3, c = (i / 3) | 0; out.push(soulAt(120 + c*46 + r*14 + j(10), r*0.5 + j(0.1))); }
+    for (let i = 0; i < 4; i++) out.push(soulAt(20 + i*28 + j(8), (i % 2)*0.6 + j(0.15)));
+  } else if (kind === "B"){                              // the fan: four rows deep, the back row wide and small, and a trail of five leading in
+    for (let i = 0; i < 4; i++) out.push(soulAt(90 + i*50 + j(8), 0 + j(0.06)));
+    for (let i = 0; i < 5; i++) out.push(soulAt(110 + i*44 + j(8), 0.33 + j(0.06)));
+    for (let i = 0; i < 5; i++) out.push(soulAt(130 + i*40 + j(8), 0.66 + j(0.06)));
+    for (let i = 0; i < 6; i++) out.push(soulAt(150 + i*34 + j(8), 1.0 + j(0.05)));
+    for (let i = 0; i < 5; i++) out.push(soulAt(8 + i*20 + j(6), 0.15 + i*0.2 + j(0.1)));
+    for (let i = 0; i < 3; i++){ const q = soulAt(296 + i*42 + j(6), 0.02 + j(0.03)); q.front = true; q.kind = i === 1 ? 0 : 1; out.push(q); }   // at its toes, over the foot, lapping the group; the middle one a man
+  } else {                                               // the crowd at its feet: an arc hugging the snout, dense, and a long trail from the left edge
+    for (let i = 0; i < 18; i++){ const a = i/17, d = 0.15 + 0.85*Math.abs(Math.sin(a*Math.PI*1.7)) * 0.9; out.push(soulAt(140 + a*170 + j(10), d + j(0.08))); }
+    for (let i = 0; i < 7; i++) out.push(soulAt(6 + i*19 + j(6), 0.9 - i*0.11 + j(0.08)));
+  }
+  return out; }
+function bossStation(){ return BOSS_FRONT + (BOSS_RIG.anchor[0] - 100)*BOSS_S; }   // the anchor's x when the snout is at BOSS_FRONT
+let softUntil = -9, preFaded = false, boss = null, wonAt = -1, jumpBoss = false, lastRescue = -9, stunUntil = -9, scoreGlow = -9, barSparks = [], barBlood = [], bleedUntil = -9; let fpsN = 0, fpsAt = 0, fpsShown = 0, fpsLog = 0; const SHOW_FPS = /[?&]fps/.test(location.search) || !!window.NATIVE_FPS;   // (NATIVE_FPS: the app's Debug builds ask for it)
+const HOLD_X = 0.30, HOLD_Y = 0.48;                                          // where he waits out the Amalgam's fall: left of it, a little low
+const pts = () => score + 10*saved + 2*slain;                              // the big number: a column is one, a demon is two, a soul is ten
+
+/* ============================ sound ============================ */
+const SND = { title: new Audio("audio/title.mp4?v=169"), back: new Audio("audio/title_back.mp4?v=175"), l1: new Audio("audio/l1.mp4?v=223"), l1q30: new Audio("audio/l1_q30.mp4?v=223"), l1q20: new Audio("audio/l1_q20.mp4?v=223"), l1q10: new Audio("audio/l1_q10.mp4?v=223"), l2: new Audio("audio/l2.mp4?v=180"), l6: new Audio("audio/l6.mp4?v=224"), win: new Audio("audio/win.mp4?v=201") };   // back: the return to the title — the heavy drums, then a baked fall to silence (a phone cannot fade)
+/* ---- inside the app (Angel Warrior.app, the Swift frame): sound goes over a bridge to AVAudioPlayer ----
+   Each track becomes a NativeTrack that speaks the same words as an <audio> element — play, pause, currentTime, muted —
+   and posts them to Swift. Loops are Swift's (loopAt), so a track never "ends" here. Volumes and fades are real there,
+   so gainTo() below simply asks for them and reports success: the whole page then takes the Mac's fading path. */
+if (!window.NATIVE_APP && /[?&]native/.test(location.search)){ window.NATIVE_APP = true;                    // ?native on the Mac: the bridge, spoken to the console instead of to Swift
+  window.webkit = { messageHandlers: { audio: { postMessage: m => console.log("audio", JSON.stringify(m)) } } }; }
+const NATIVE = !!(window.NATIVE_APP && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.audio);
+const DEMO = !!window.AW_DEMO || /[?&]demo/.test(location.search);   // the web demo (angelwarriorgame.com/play): the first two realms, then an invitation to the full game
+const DEMO_URL = "https://angelwarriorgame.com/ios", DEMO_BTN = { y: 560, w: 300, h: 54 }, DEMO_STORE = !!window.AW_DEMO_STORE, DEMO_LABEL = window.AW_DEMO_LABEL || "GET THE FULL GAME", DEMO_SUB = window.AW_DEMO_SUB || "FREE ON THE APP STORE";   // the store button appears once the App Store page is live (AW_DEMO_STORE = true)
+const RELEASE = DEMO || !!window.NATIVE_RELEASE || /[?&]release/.test(location.search);   // (?release on the web: preview the shipped layout)                                   // the shipped app: no level picker, no testing rows
+if (NATIVE) window.onerror = (msg, src, line) => { try { window.webkit.messageHandlers.audio.postMessage({ cmd:"log", key:"error", name: msg + " @" + line }); } catch(e){} };
+function na(msg){ try { window.webkit.messageHandlers.audio.postMessage(msg); } catch(e){} }
+/* ads (1.1, the app only): a full-screen ad a moment after the angel falls, on every third game over — never in a
+   player's first four runs, never within two minutes of the last ad, never after a victory. Swift shows it (AdManager).
+   It comes 1.3 s after the fall, while the screen dims and before PLAY AGAIN appears, so no tap ever lands on it. */
+const AD = { overs: 0, runs: 0, lastAt: -1e12, minRuns: 4, every: 3, gapMs: 120000 };
+let adPending = false;
+function adAfterOver(){ if (!NATIVE) return false; AD.overs++;
+  if (AD.runs < AD.minRuns || AD.overs < AD.every || Date.now() - AD.lastAt < AD.gapMs) return false;
+  AD.overs = 0; AD.lastAt = Date.now(); adPending = true; na({ cmd: "ad", key: "show" });
+  setTimeout(() => window.__adClosed(), 90000);   // a safety net: the title comes back even if Swift never answers
+  return true; }
+/* partner churches (1.1, the app only): a one-time "Playing with a church?" and a MY CHURCH corner on the title.
+   The list comes from the website (angelwarriorgame.com/churches.json), so churches are added without an app update;
+   test entries show only in a test build. Swift keeps the choice and a random player number in the player's iCloud,
+   and sends one count a day for the chosen church. Nothing personal leaves the phone. */
+const CH = { list: [], id: window.AW_CHURCH || "", asked: !!window.AW_CHURCH_ASKED, open: false, url: "https://angelwarriorgame.com/churches.json" };
+const chEl = id => document.getElementById(id);
+function chList(){ return CH.list.filter(c => c && c.id && c.name && (!c.test || !RELEASE || window.AW_TEST_CHURCHES)); }   // (a Debug build keeps the test churches even with the plumbing hidden)
+let ADP = false;                                    // Google says this player (EEA / UK / Switzerland) needs the AD PRIVACY link
+window.__adPrivacy = on => { ADP = !!on; };
+function chName(){ const c = CH.list.find(c => c.id === CH.id); return c ? c.name : ""; }
+async function chLoad(){
+  try{ const cached = localStorage.getItem("aw.churches"); if (cached) CH.list = JSON.parse(cached) || []; }catch(e){}
+  try{ const r = await fetch(CH.url + "?h=" + Math.floor(Date.now()/3600000), { cache: "no-store" });
+    if (r.ok){ const j = await r.json(); if (j && Array.isArray(j.churches)){ CH.list = j.churches; try{ localStorage.setItem("aw.churches", JSON.stringify(CH.list)); }catch(e){} } } }catch(e){}
+}
+function chRender(){
+  const q = (chEl("chSearch").value || "").trim().toLowerCase(), ul = chEl("chList"); ul.textContent = "";
+  const items = chList().filter(c => !q || (c.name + " " + (c.city || "")).toLowerCase().includes(q));
+  if (!items.length){ const li = document.createElement("li"); li.className = "empty"; li.textContent = q ? "No church by that name yet." : "No partner churches yet."; ul.appendChild(li); return; }
+  for (const c of items){ const li = document.createElement("li"), b = document.createElement("button"); b.type = "button";
+    b.setAttribute("aria-pressed", c.id === CH.id ? "true" : "false"); b.textContent = c.name;
+    if (c.city){ const sm = document.createElement("small"); sm.textContent = c.city; b.appendChild(sm); }
+    b.addEventListener("click", () => { CH.id = c.id; chRender(); }); li.appendChild(b); ul.appendChild(li); }
+}
+function chOpen(first){
+  CH.open = true; CH.first = first; CH.picked = CH.id;
+  chEl("chTitle").textContent = first ? "Playing with a church?" : "My church";
+  chEl("chSub").textContent = first ? "Pick your church and your play counts toward its share. You can change it any time with PICK CHURCH on the title screen."
+                                    : (CH.id ? "Your play counts for " + chName() + ". Pick another to change it." : "Pick your church and your play counts toward its share.");
+  chEl("chNone").textContent = first ? "No thanks" : (CH.id ? "No church" : "Cancel");
+  chEl("chSearch").value = ""; chRender(); const el = chEl("church"); el.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("on")));   // fades and rises in
+}
+function chDone(id){ CH.id = id; CH.asked = true; const el = chEl("church"); el.classList.remove("on"); setTimeout(() => { el.hidden = true; CH.open = false; }, 450); chEl("chSearch").blur();
+  na({ cmd: "church", key: id || "" }); }
+chEl("chClose").addEventListener("click", () => chDone(CH.id));
+chEl("chJoin").addEventListener("click", e => { if (NATIVE){ e.preventDefault(); na({ cmd: "open", key: "https://angelwarriorgame.com/church" }); } else { e.preventDefault(); window.open("https://angelwarriorgame.com/church", "_blank"); } });   // the partner page, in Safari
+chEl("chNone").addEventListener("click", () => chDone(CH.first || CH.id ? "" : CH.picked));
+chEl("chSearch").addEventListener("input", chRender);
+if (NATIVE) chLoad();
+function chPing(){ if (NATIVE && CH.id) na({ cmd: "ping", key: CH.id }); }
+
+/* Swift calls this when the ad closes (or when no ad was ready): straight back to the title screen, its music with it */
+window.__adClosed = () => { const was = adPending; adPending = false; if (NATIVE) console.log("adClosed was=" + was + " state=" + state); if (state === "over") reset(); };
+class NativeTrack {
+  constructor(k, src){ this.k = k; this.file = src.split("?")[0]; this.paused = true; this.ended = false; this.readyState = 4; this.duration = 150; this._t = 0; this._at = 0; this.muted = false; }
+  get currentTime(){ return this.paused ? this._t : this._t + (performance.now() - this._at)/1000; }   // its own estimate of where Swift is
+  set currentTime(v){ this._t = v; this._at = performance.now(); na({ cmd:"seek", key:this.k, to:v }); }
+  play(){ if (!this.paused) return Promise.resolve(); this.paused = false; this._at = performance.now();
+    const loopAt = LOOP_AT[this.k] != null ? LOOP_AT[this.k] : (this.k === "title" ? TITLE_IN : null);
+    na({ cmd:"play", key:this.k, file:this.file, from:this._t, loopAt }); return Promise.resolve(); }
+  pause(){ if (this.paused) return; this._t = this.currentTime; this.paused = true; na({ cmd:"pause", key:this.k }); }
+  load(){} addEventListener(){} removeEventListener(){}
+}
+if (NATIVE) for (const k in SND) SND[k] = new NativeTrack(k, SND[k].getAttribute("src")); else for (const k in SND) SND[k].preload = "auto";
+const LOOP_AT = { l1: 41.0, l1q30: 41.0, l1q20: 41.0, l1q10: 41.0, l2: 24.0, l6: 38.0, win: 26.75 };
+const WIN_IN = 44.6;                                                          // The Beast Has Fallen: in just before its first heavy drum (45.1s), the moment the Amalgam dies                               // where a level's music goes back to when it runs out: somewhere already exciting, not the quiet opening
+for (const k in LOOP_AT) SND[k].addEventListener("ended", ()=>{ const a = SND[k]; if (track !== a && under !== a) return; try { a.currentTime = LOOP_AT[k]; } catch(e){} a.play().catch(()=>{}); });   // (its last seconds are already blended into that place, so the join is clean)                                                             // the run's music: Depth I's track, its loop baked (the end already is the start)
+const MUSIC = [SND.l1, null, null, null, null, SND.l6];                       // level 1's track carries through to the Pit (Ash and Stone stays loaded, unused, for now)                       // The Hollow Pursuit: the Pit, and on through the Amalgam                          // per depth; a depth with no track of its own keeps the last one playing
+let track = null, under = null;                                              // under: the last level's music, left at a tenth beneath the current one (v192 lost this declaration: stopTrack threw, and the music ran on over the death screen)
+const QUIET = { l1: ["l1q30", "l1q20", "l1q10"] };                          // a phone cannot turn a track down, so quieter twins take over at the same moment in the music: 30, then 20, then 10 percent, each at a quiet falling spot
+for (const k in QUIET) for (const q of QUIET[k]) SND[q].preload = "none";        // fetched only when the Pit nears, not on every open
+function quietTwinsLoad(k){ for (const q of (QUIET[k] || [])) if (SND[q].readyState === 0) SND[q].load(); }
+/* a track's loudness, tenth-second by tenth-second, 0–9a–z: to find a quiet, falling moment to stop it on a phone */
+const ENV = { l1: "000000000000001111122233333445555455jkkfifffgb99cdda8debbb87888777899abbb9666887777765677778a8aa89889adbciefgeicccdfeeedcdfdddbcdecdcbba9aabcaba99a9899978987666888aa79ba9778hjggdfhefeecbbcccdbccddb99aaaba988bbccba98889a9999999cba9989989abbbcchedddffeddeeffedbaccdcaabbbbbbaabbcdbacbaaa9a99999aacba989889a9899feopnhchdebhaa99aebbadcbbb9aaccb98886b9987987556678aba8a899a9adiikjjjkhrsqjnfdgkffddgfddfifeeeddedca9bbbbhifefededfgdedfffhfifggfffhgggffgilpkpmmjikjkjhfiedgfgeedfddffdeeffbbcfddbaccbbbccbccdfcecegecgihjjjhlkmsmnlllklhmlghjjjlhjkkjgghjjhggggghiihggiiedhfggebeffigjhghijjgfknlliloijjlhgkecedbcbafbb898abcbaaaaba9mjea9b89effaebcdfkijjklilmnpnjnomotzvoqrpkpqnplmmlilkijhhgffiijihfkjkmkijkkilmkiijjgihjfihghjlmmllkmhlksqokqpnmolmkllhhinnkhiggdeheegeddeqkhffefdgnidcjdefjjedhlkeimikiongmmwvoqpnllnkihinihjkifghhhghgihjihhjjikjimmkmmmkijkjjjjhhhhhjllijikjmirqpnmtnkplhdhiggfiihegfgghicdededdhddcdbb9bedcceeedhgffhigghijjkmmpmouplpnqlopmqmoljhikliiljlillnkhihgikmjhhhhiijkijjkhhighfhfedihgfjjkkfqooiimjggijggljfgljhcdfghjmigggghghecceeggeggfghgdefiiehjiigjkihhkmjmrtlpmpnpomlkkkhhhlkgfgffeijgefeffgkhfeegfegjhggjghglhecihgglmnkklkmmnsvhpjilnjmginiifkjiikiiggmjifhghinpoklmlijoliilliikjihikihhliighejinrxpolnnlokigkpjkknpllmijjnnkiimhggomijjiihjijgfllhhlljgklmllmnoopopqqtxrsmkkgmohioniknnmjjjjihkkiiijhgklmjjjiikljjinjkijkhhhljhimjigjlkmntvrlmpnmoolilmmklomljjjkkmnkjijjhgmlggjjihjmljlnoiiomffjkmnmnnopnnnpptsokimghmkhigifeededbca99a98788668888889bbbcaabb9abb9a9a9cebcdaddd99giibbaabbc8bbbccdcdddefh" };
+function quietStop(k, t, minS, maxS){ const e = ENV[k]; if (!e) return null; const v = (i) => parseInt(e[i % e.length], 36);
+  let best = null, bestScore = 1e9; const i0 = Math.floor((t + minS)*10), i1 = Math.floor((t + maxS)*10);
+  for (let i = i0; i < i1; i++){ const slope = v(i) - v(i - 3), score = v(i) + Math.max(0, slope)*2;   // low, and coming down rather than rising
+    if (score < bestScore){ bestScore = score; best = i; } }
+  return best == null ? null : Math.round((best/10 - t)*1000); }
+/* a run's first track starts from its opening and rises; a track that takes over MID-RUN comes in strong at its exciting
+   place while the old one runs on underneath for four seconds (on the phone, which cannot fade, the old one simply stops) */
+function playTrack(a, mid, from, holdMs){ if (track === a) return;
+  if (track){ const old = track, k = keyOf(old);
+    if (holdMs != null){ if (!gainTo(k, 0, holdMs/1000)) {} setTimeout(()=>{ if (track !== old) old.pause(); }, holdMs); }   // a plain hand-off: the old runs on for holdMs (fading where it can), then stops
+    else
+    if (mid && gainTo(k, 0, 5.0)){ under = old; setTimeout(()=>{ if (under === old){ old.pause(); under = null; } }, 5200); }   // mid-run, where it can fade (the Mac, the app): what is left of the old sinks to silence over five seconds and stops
+    else if (mid && QUIET[k]){ under = old; stepDown(k, old, 0); }              // the phone: down the stairs — 30, 20, 10 percent — each step at a quiet, falling moment of the music
+    else { const faded = gainTo(k, 0, 1.2), hold = faded ? 1300 : 0; if (hold) setTimeout(()=>{ if (track !== old) old.pause(); }, hold); else old.pause(); } }
+  track = a; if (!a) return; a.muted = muted; const nk = keyOf(a);
+  try { a.currentTime = from != null ? from : (mid && LOOP_AT[nk] != null ? LOOP_AT[nk] : 0); } catch(e){}
+  // where it can fade (the Mac, the app): a run's first track rises over 3s; a track that takes over mid-run swells in
+  // over 4s from its quiet bar before the drop (Depth VI enters at 38.0: the break, then the drums at 42 — Jerry,
+  // 2026-09-23) — except a hand-off with holdMs (the victory drum), which must land at once
+  if (gains[nk]){ if (holdMs != null){ gains[nk].gain.value = 1; } else { gains[nk].gain.value = 0; gainTo(nk, 1, mid ? 4.0 : 3.0); } }
+  a.play().catch(()=>{}); }
+function stepDown(k, cur, i){ const names = QUIET[k]; if (i >= names.length) return;
+  const q = SND[names[i]], hold = quietStop(k, cur.currentTime, 5.0, 9.0) ?? 7000;
+  setTimeout(()=>{ if (under !== cur) return;                                   // (the run ended, or something else took over)
+    q.muted = muted; try { q.currentTime = cur.currentTime; } catch(e){} q.play().catch(()=>{}); cur.pause(); under = q; stepDown(k, q, i + 1); }, hold); }
+function keyOf(a){ for (const k in SND) if (SND[k] === a) return k; return null; }
+function stopUnder(){ if (under){ const u = under; under = null; if (gainTo(keyOf(u), 0, 1.0)) setTimeout(()=>{ u.pause(); }, 1100); else u.pause(); } }
+function stopTrack(){ stopUnder();
+  if (!track) return; const old = track, k = keyOf(old); track = null; if (gainTo(k, 0, 1.0)) setTimeout(()=>{ if (track !== old) old.pause(); }, 1100); else old.pause(); }
+const TITLE_IN = 6.0, TITLE_BEAT = 4.5;   // (from 6.0: two seconds less waiting, the great drum still lands at 10.5 in the track, the title whole on it — Jerry, 2026-09-26)                                        // the first time: the track starts at 4.0s so its first great drum lands 6.5s later — as the title completes
+const TITLE_BACK = 22.3, BACK_BEAT = 0.5;                                      // coming back after a death: straight into the heavy drums at 0:22, the title back in half a second
+let titleBeat = TITLE_BEAT;
+let muted = false; try { muted = localStorage.getItem("michaelmas.mute") === "1"; } catch(e){}
+if (NATIVE && muted) na({ cmd:"mute", on:true });   // a remembered SOUND OFF must reach Swift too — or the music plays while the effects stay silent (the phone, 2026-09-23)
+/* Fades. A phone ignores an <audio>'s volume, so fades need Web Audio — but Web Audio sits under the iPhone's ringer
+   switch unless the page asks for the "playback" audio session (iOS 17+). So: on a phone that can ask, ask and fade
+   through gains; on one that cannot, plain <audio> and no fades (Jerry's phone went silent the first time). */
+const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+let actx = null, gains = {};
+function audioUp(){
+  if (NATIVE) return;                                // the app: Swift holds the sound
+  if (actx){ if (actx.state === "suspended") actx.resume().catch(()=>{}); return; }
+  if (IOS) return;                                   // an iPhone: Web Audio went silent on Jerry's twice (even asking for the playback session) — stay plain, no fades, until the native app
+  try { actx = new (window.AudioContext || window.webkitAudioContext)();
+    for (const k in SND){ const gn = actx.createGain(); gn.gain.value = 1; actx.createMediaElementSource(SND[k]).connect(gn); gn.connect(actx.destination); gains[k] = gn; }
+  } catch(e){ actx = null; gains = {}; } }
+if (NATIVE) for (const k in SND) gains[k] = { gain: { set value(v){ na({ cmd:"volume", key:k, vol:v, fade:0 }); } } };   // a "gain" that is a message
+function gainTo(k, v, secs){ if (NATIVE){ na({ cmd:"volume", key:k, vol:v, fade:secs }); return true; }
+  const gn = gains[k]; if (!gn || !actx) return false; const t = actx.currentTime;
+  gn.gain.cancelScheduledValues(t); gn.gain.setValueAtTime(gn.gain.value, t); gn.gain.linearRampToValueAtTime(v, t + secs); return true; }
+let wantSeek = null, stopAt = null;
+function seekNow(){ if (wantSeek == null) return; try { SND.title.currentTime = wantSeek; wantSeek = null; } catch(e){} }
+for (const ev of ["loadedmetadata", "canplay", "playing"]) SND.title.addEventListener(ev, seekNow);   // a seek before the header is in is ignored: try again as the file arrives
+let titleEl = SND.title;                                                    // which one is on: the long track (first time) or the return sting
+/* the return sting, from its top — and CHECKED. On the phone it sometimes did not come back (every other death, Jerry,
+   2026-09-23): an element that had ended, or was still playing its silent tail, took the seek-and-play and stayed quiet.
+   So: pause, seek, play; then look half a second later, and if it is not running from its top, do it again; and if it
+   still is not, reload the element outright and play that. */
+function backStart(tries){ const b = SND.back; b.muted = muted;
+  if (tries === 2){ try { b.load(); } catch(e){} }
+  try { b.pause(); } catch(e){} try { b.currentTime = 0; } catch(e){} b.play().catch(()=>{});
+  if (tries < 2) setTimeout(()=>{ if (titleEl !== b || state !== "ready") return;
+    if (b.paused || b.ended || b.currentTime > 2.5 || b.currentTime === 0) backStart(tries + 1); }, 600); }
+function playTitle(from){ audioUp(); if (stopAt){ clearTimeout(stopAt); stopAt = null; }
+  if (from === TITLE_BACK){ SND.title.pause(); titleEl = SND.back; gainTo("back", 1, 0.05); backStart(0); return; }
+  const a = SND.title; titleEl = a; SND.back.pause();
+  if (gains.title) gains.title.gain.value = 0; gainTo("title", 1, from === TITLE_IN ? 1.5 : 0.05); a.muted = muted; wantSeek = from; if (a.readyState >= 1) seekNow();   // (where it can fade: in over 1.5s, since it now starts inside the build)
+  a.play().catch(()=>{}); if (a.readyState >= 1) seekNow(); }
+function stopTitle(){ const a = titleEl, k = keyOf(a); if (stopAt) clearTimeout(stopAt);              // the run begins: the drums trail off under the level's music
+  const faded = gainTo(k, 0, 4.0);                                                                // a long fade on the Mac
+  if (faded) stopAt = setTimeout(()=>{ a.pause(); stopAt = null; }, 4100);
+  else if (a === SND.back) stopAt = null;                                                        // the phone: the return sting carries its own fall to silence — let it play out
+  else stopAt = setTimeout(()=>{ a.pause(); stopAt = null; }, 3000); }                             // the phone, first time: a 3s trail, then it stops
+SND.title.addEventListener("ended", ()=>{ wantSeek = TITLE_IN; SND.title.play().catch(()=>{}); seekNow(); });   // it loops from the build, not the silence
+function setMuted(m){ muted = m; try{ localStorage.setItem("michaelmas.mute", m ? "1" : "0"); }catch(e){} for (const k in SND) SND[k].muted = m; for (const a of SP) a.muted = m; if (NATIVE) na({ cmd:"mute", on:m }); }
+/* ---- sound effects ---- ONE file (audio/sfx.mp4, baked by bake_sfx.py) holding every effect end to end, and three
+   players that seek into it. Sixteen separate <audio> elements made the phone sluggish (Opus, 2026-09-20); three do not.
+   Nothing loads before the first tap: sfxUnlock() wakes the three players inside that tap, silently. */
+const SPR = {"kill1":[0.1, 1.0], "kill2":[1.5, 1.3], "kill3":[3.2, 1.62], "kill4":[5.22, 1.1], "kill5":[6.72, 0.56], "kill6":[7.68, 1.26], "col1":[9.34, 0.86], "col2":[10.6, 0.8], "col3":[11.8, 1.77], "col4":[13.97, 0.85], "col5":[15.22, 0.92], "col6":[16.54, 0.92], "goo":[17.86, 0.73], "bosshit":[18.99, 1.12], "bossdie":[20.51, 3.263], "soul":[24.173, 2.49]};   // name: [start, length] seconds
+const SP = Array.from({ length: 3 }, ()=>{ const a = new Audio("audio/sfx.mp4?v=273"); a.preload = "none"; a.spEnd = null; return a; });
+const KILL_SFX = { demon:"kill1", vulture:"kill2", fish:"kill3", bee:"kill4", toad:"kill5", fallen:"kill6" };
+let spN = 0;
+function sfxUnlock(){
+  if (NATIVE) return;                                                                          // nothing to wake: Swift preloaded every effect
+  for (const a of SP){ a.muted = true; a.preload = "auto"; try { a.load(); } catch(e){}
+    try { const q = a.play(); if (q && q.catch) q.catch(()=>{}); } catch(e){} a.pause(); }     // play and pause in the same breath: no sound
+  setTimeout(()=>{ for (const a of SP){ a.pause(); a.muted = muted; } }, 500);
+}
+function sfx(name){
+  if (muted) return; if (NATIVE){ na({ cmd:"sfx", name }); return; }
+  const seg = SPR[name]; if (!seg) return;
+  const can = x => x.readyState >= 1 && x.seekable.length && x.seekable.end(0) > seg[0];   // a player that can seek there (one served without ranges cannot)
+  let a = SP.find(x => x.paused && can(x)); if (!a){ a = SP[spN]; spN = (spN + 1) % SP.length; }   // a free player, or steal the oldest
+  if (!can(a)) return;                                                                       // nothing can: silence is better than the wrong sound
+  a.muted = false; a.spStart = seg[0]; a.spEnd = seg[0] + seg[1];
+  try { a.currentTime = seg[0]; } catch(e){ return; }
+  a.play().catch(()=>{});
+  // it stops on a timer, not by watching its clock every frame: on a phone, asking a player where it is each frame
+  // costs a trip to the media process, and in the boss fight (a hit every third of a second) that read as a heavier angel
+  if (a.spTimer) clearTimeout(a.spTimer);
+  a.spTimer = setTimeout(()=>{ a.spTimer = null; if (a.spEnd !== null){ a.pause(); a.spEnd = null; } }, seg[1]*1000 + 80);
+}
+let entered = false, titleAt = -99, gateAt = -1, demoAt = -1;                                          // the black gate before the title: the first tap lets the sound in
+/* ============================ game state ============================ */
+const M = {};                       // Michael
+let launchAt = -99, launchX = W*0.5;
+let jump = 0, jumpPre = false, depth, depthAt, shown, cols, demons, souls, bursts, state, score, saved, slain, best = 0, tapAt, blazeUntil, hitFlash, dead, power, graceUntil;
+let bestFast = 0, speed = 1, paused = false; const FAST = 1.3;                     // paused: the world holds still and the frame stays drawn                                    // fast: the whole game at 1.3× — scroll, fall, flap, creatures alike
+const SPD = { y: RELEASE ? 604 : 548, dx: 78 };   // (shipped: lower, clear of the angel — the level row it made room for is gone)
+const CHB = { y: (RELEASE ? 670 : 704) + 72, x: 0, w: 0, h: 26 };   // the PICK CHURCH button, centred under best / fast (1.1)
+const TAG_Y = RELEASE ? 670 : 704;                 // KILL DEMONS / SAVE SOULS / best, a little higher in the shipped app                                                    // NORMAL | FAST on the title, above the level row
+try { best = parseInt(localStorage.getItem("michaelmas.best")||"0") || 0; bestFast = parseInt(localStorage.getItem("michaelmas.bestfast")||"0") || 0;
+      speed = localStorage.getItem("michaelmas.speed") === "fast" ? FAST : 1; } catch(e){}
+function reset(){
+  Object.assign(M, { x: W*0.5, y: H*0.53, vy: 0, kb: 0 });
+  cols = []; demons = []; souls = []; bursts = [];
+  depth = 0; depthAt = -99; shown = T.power; score = 0; saved = 0; slain = 0; tapAt = -10; blazeUntil = -1; hitFlash = 0; dead = null; power = T.power; graceUntil = -1;
+  for (const k in S) S[k].reset();
+  boss = null; wonAt = -1; M.vx = 0; barBlood = []; bleedUntil = -9; preFaded = false; stopTrack();                              // (the win music, if it was playing, goes as the title returns)
+  state = entered ? "ready" : "gate"; if (entered){ titleAt = now; titleBeat = BACK_BEAT; playTitle(TITLE_BACK); }
+}
+/* the level is written in phrases: a tight cluster of columns, then a clearing. Souls kneel in
+   the clearings, so saving one costs you the breathing room you would otherwise have had. */
+let phrase = { n: 2, left: 2, nextGap: 0, colonnade: false, shape: "wave", space: 1 }, nextX = 0;
+/* the level is written in phrases, and a phrase can take several SHAPES — a wave, a stair, a zigzag, a flat
+   corridor, a long run, a colonnade — followed by one of several KINDS of clearing. Neither repeats twice
+   running, so the ear never quite learns the song. */
+const SHAPES = [["wave",0.24],["stair",0.14],["zigzag",0.12],["flat",0.10],["long",0.10],["colonnade",0.14],["bunch",0.10],["dive",0.13]];
+/* bunch: two or three pairs so close they overlap into one thick jagged pillar, the gap the narrow part they share.
+   dive: no bottom piece at all — the top one hangs almost to the floor, and he has to go down under it. */
+const CLEARS = [["breath",0.10],["soul",0.22],["guarded",0.38],["ambush",0.15],["rest",0.15]];
+let lastShape = "wave", lastClear = "guarded";
+const STRAIGHT = ["flat", "long"];                                              // the two straight shapes never follow one another
+function draw1(table, not){ const pool = table.filter(t => t[0] !== not && !(STRAIGHT.includes(not) && STRAIGHT.includes(t[0]))), tot = pool.reduce((a,t)=>a+t[1],0);
+  let r = Math.random()*tot; for (const t of pool){ r -= t[1]; if (r <= 0) return t[0]; } return pool[pool.length-1][0]; }   // nextX: where the next pair goes, even after the last one has scrolled off
+const lo = T.gap/2 + 115, hi = T.fireLine - 50 - T.gap/2;   // +115: the highest passage clears the score, the count and the bar
+/* How steeply he can climb: tapping flat out he gains ~300px/s against 200px/s of scroll, so a
+   slope of 1.0 is the honest ceiling; 0.8 leaves room for a human thumb. Diving is free. */
+const CLIMB = 0.8, COLW = C.w*T.colScale;
+let lastSoulX = -1e9, spawnN = 0;                                             // spawnN: the score the newest pair will be worth
+const flierKind = ()=> depth === 0 ? "demon" : depth === 1 ? "vulture" : depth === 2 ? "fish" : depth === 3 ? "bee" : depth === 4 ? "toad" : "fallen";
+/* a threader: it spawns in a passage and flies the cluster the way he must — left through the gaps,
+   steering for the open lane of each pair it is about to cross. It held station once ("a lurker") and
+   read as scenery. It is as solid as any of them — the blade kills it, the body takes the hit — but it
+   keeps to one EDGE of every gap it threads, so two thirds of the passage stay open ahead of it. */
+function lurker(at, cy){                                                       // returns the open lane it leaves, top and bottom
+  const kind = flierKind(), hb = T.hit[kind] || [T.demonR, T.demonR], side = Math.random() < 0.5 ? -1 : 1;
+  // near the MIDDLE of the passage, a little to the away side — where the blade can reach it — but never so
+  // far in that less than T.lane of air is left on the onward side (worked out from its own collision box)
+  const off = Math.max(T.gap*0.16, (hb[1] + 24) + T.lane - T.gap/2);
+  demons.push({ x: at, y: cy + side*off, kind, lurk: 1, thread: 1, side, off,
+                v: T.demonSpeed*(1.6 + Math.random()*1.0), ph: Math.random()*6, dead: 0,    // fast: it crosses a pair every second or two
+                aimed: true, jinked: true, ty: null });
+  const inner = off - (hb[1] + 24);                                            // how far into the gap its body reaches
+  return side > 0 ? [cy - T.gap/2, cy + inner] : [cy - inner, cy + T.gap/2];
+}
+function spawnPair(x){
+  const prev = cols[cols.length-1], first = phrase.left === phrase.n;
+  let cy;
+  if (first || !prev){ cy = lo + Math.random()*(hi-lo);                    // a phrase opens wherever it likes
+    phrase.amp = Math.min(T.wave[0] + Math.random()*(T.wave[1]-T.wave[0]), (hi-lo)/2);   // and picks the wave the rest will ride — it has to fit the band
+    phrase.dph = (0.8 + Math.random()*0.7) * (Math.random() < 0.5 ? 1 : -1);
+    phrase.ph = 0; phrase.base = Math.max(lo + phrase.amp, Math.min(hi - phrase.amp, cy));
+    phrase.dir = Math.random() < 0.5 ? -1 : 1;                                // stairs and zigzags: which way first
+    if (STRAIGHT.includes(phrase.shape)) phrase.dir = phrase.base > (lo + hi)/2 ? -1 : 1;   // a straight run's break goes toward the middle of the band, where there is room
+    phrase.stepH = phrase.shape === "stair" ? 55 + Math.random()*50 : STRAIGHT.includes(phrase.shape) ? 90 + Math.random()*40 : 80 + Math.random()*60;
+    if (phrase.shape === "stair") cy = phrase.dir > 0 ? lo + Math.random()*(hi-lo)*0.4 : hi - Math.random()*(hi-lo)*0.4;   // room to climb, or to fall
+    // a colonnade's three stand at slightly different heights, and two of them closer than the third
+    const d1 = (Math.random() < 0.5 ? -1 : 1) * (18 + Math.random()*26), d2 = (Math.random() < 0.5 ? -1 : 1) * (18 + Math.random()*26);
+    phrase.cshift = [0, d1, d2];
+    phrase.cgaps = Math.random() < 0.5 ? [T.shoulder - 14, T.shoulder + 44] : [T.shoulder + 44, T.shoulder - 14];
+    if (phrase.shape === "bunch"){                                            // overlapping: a hand's width apart, a small step between
+      phrase.cgaps = [45 + Math.random()*35, 45 + Math.random()*35];
+      phrase.cshift = [0, (Math.random() < 0.5 ? -1 : 1)*(15 + Math.random()*20), (Math.random() < 0.5 ? -1 : 1)*(15 + Math.random()*20)]; }
+    if (phrase.shape === "dive") cy = T.fireLine - 165 + T.gap/2 + Math.random()*55; }   // the passage is the last 110–165px above the floor
+  else if (phrase.colonnade){                                               // a colonnade: nearly straight, never level
+    const run = x - prev.x - COLW, upMax = CLIMB*Math.max(0, run);
+    const want = prev.cy + phrase.cshift[phrase.n - phrase.left];            // this pair's step, chosen when the phrase began
+    cy = Math.max(lo, Math.min(hi, Math.max(prev.cy - upMax, want)));        // drops are free, rises only what the run allows
+  }
+  else {                                                                    // a cluster: a wave, in reachable steps
+    const run = x - prev.x - COLW, k = phrase.n - phrase.left;
+    const sh = phrase.shape;
+    const want = sh === "dive"   ? (()=>{ const lo2 = T.fireLine - 165 + T.gap/2, hi2 = T.fireLine - 110 + T.gap/2;   // ceilings from 165 to 110px above the floor
+                                          let y = lo2 + Math.random()*(hi2 - lo2);
+                                          if (Math.abs(y - prev.cy) < 35) y = prev.cy + (prev.cy < (lo2+hi2)/2 ? 35 : -35);   // never level with the last
+                                          return Math.max(lo2, Math.min(hi2, y)); })()
+               : sh === "stair"  ? prev.cy + phrase.dir*phrase.stepH
+               : sh === "zigzag" ? prev.cy + (k % 2 ? -1 : 1)*phrase.dir*phrase.stepH
+               // the straight shapes get one BREAK in the middle — a dip or a jag of a hundred-odd px and back — so a
+               // run of level columns never goes on unbroken (Jerry saw long flat stretches in the comb)
+               : sh === "flat"   ? phrase.base + (Math.random() - 0.5)*36 + (k === (phrase.n >> 1) ? phrase.dir*phrase.stepH : 0)
+               : sh === "long"   ? phrase.base + phrase.amp*0.6*Math.sin(phrase.ph + k*phrase.dph*0.7) + (k === (phrase.n >> 1) ? phrase.dir*phrase.stepH : 0)
+               :                   phrase.base + phrase.amp*Math.sin(phrase.ph + k*phrase.dph);
+    const upMax = Math.min(T.step, CLIMB*run), downMax = T.step;
+    // a lurker in the gap behind pins him to one edge of it, so the rise is measured from the BOTTOM of
+    // the lane it left and the dive from the TOP — dodging the creature must never cost him the next gap
+    const fromUp = phrase.lane ? phrase.lane[1] : prev.cy, fromDn = phrase.lane ? phrase.lane[0] : prev.cy;
+    cy = sh === "dive" ? want : Math.max(lo, Math.min(hi, Math.max(fromUp - upMax, Math.min(fromDn + downMax, want))));   // a dive sits below the band on purpose
+  }
+  // a soul just behind this pair: he will be down at the fire line, so this gap must be reachable from there
+  if (lastSoulX < x && lastSoulX > x - 1200){
+    const y0 = T.fireLine - 60, run = x - lastSoulX - COLW/2 - 30;
+    const reachableTop = y0 - CLIMB*Math.max(0, run);
+    cy = Math.max(cy, Math.min(hi, reachableTop - T.gap/2 + T.bodyR + 16));
+  }
+  // a pair that would reach him while the world is still crossfading is the OLD world's stone; after the
+  // change nothing is laid down until the turn is done, so in practice this only guards the edge cases
+  const arrives = now + (x - M.x)/(T.scroll*speed), fadeEnd = depthAt + T.fade[Math.min(depth, T.fade.length-1)]/speed;
+  const kd = depth > 0 && arrives < fadeEnd ? depth - 1 : depth;
+  const kind = kd === 0 ? "column" : kd === 1 ? "spire" : kd === 2 ? "tooth" : kd === 3 ? "hive" : kd === 4 ? "fungus" : "ice";
+  const set = kind === "spire" ? SPIRES : kind === "tooth" ? TEETH : kind === "hive" ? HIVE : kind === "fungus" ? FUNGUS : kind === "ice" ? ICE : null;
+  // no piece stands over its own twin, and none repeats from the column before: that is what the variety is for
+  const pick = (from, avoid)=>{ const pool = from.filter(s => !avoid.includes(s));
+    const f = pool.length ? pool : from; return f[Math.floor(Math.random()*f.length)]; };
+  const last = cols[cols.length-1];
+  const before = last && last.sp ? [last.sp, last.sp2] : [];
+  // in the comb the charred ones hang from above: their black tips read against that bright sky
+  const split = kind === "fungus" || kind === "ice";                          // jelly and chains hang; posts and shards rise
+  const topSet = kind === "hive" ? set.filter(o => o.dark) : split ? set.filter(o => o.hang) : set;
+  const botSet = kind === "hive" ? set.filter(o => !o.dark) : split ? set.filter(o => !o.hang) : set;
+  const sp  = set ? pick(topSet, before) : null;
+  const sp2 = set ? pick(botSet, before.concat([sp])) : null;
+  // a wide one now and then — but jelly only a little: at 1.5× a stalactite hung like a wall
+  const fat = sp && Math.random() < 0.35 ? (sp.hang ? 1.2 : 1.5) : 1;
+  // the Pit: its shards drift up and down — a player's suggestion (2026-09-26). Each pair rides its own slow wave;
+  // the gap moves with it, so what he sees is what kills him
+  const bob = kind === "ice" ? { cy0: cy, A: 34, w: 1.6 + Math.random()*0.8, p: Math.random()*6.3 }
+            : kind === "tooth" ? { cy0: cy, A: 26, w: 1.3 + Math.random()*0.6, p: Math.random()*6.3 } : null;   // the rusted teeth of Depth III too, a little less
+  cols.push({ x, cy, passed:false, kind, sp, sp2, fat, dive: phrase.shape === "dive", bob }); nextX = x; spawnN++;
+  if (phrase.shape === "dive") lastSoulX = Math.max(lastSoulX, x);          // he leaves a dive at the floor: what follows is placed as if a soul were here
+  /* the quiet zone: from three columns before a change until its fade is done, nothing new is laid
+     down — no soul, no hunter, no threader — so what is on screen has scrolled off before the world
+     turns, and the first thing he meets in the new depth is the depth itself */
+  const nextAt = depth + 1 < T.levelAt.length ? T.levelAt[depth+1] : Infinity;
+  // (the zone ends two seconds before the fade does: what is laid down then reaches him as the world settles)
+  const fadeT = T.fade[Math.min(depth, T.fade.length-1)];
+  const settling = depth > 0 && (now - depthAt)*speed < fadeT - 2;
+  const quiet     = spawnN >= nextAt - 2 || settling;                        // creatures: gone a column and a half before the change
+  const quietSoul = spawnN >= nextAt - 1 || settling;                        // souls: allowed right up to it — a rescue, then the world turns
+  phrase.left--;
+  if (phrase.left > 0){ phrase.nextGap = phrase.colonnade ? phrase.cgaps[phrase.n - phrase.left - 1]
+                                       : T.tight * phrase.space * (0.85 + Math.random()*0.30);  // each cluster has its own stride, and no two gaps alike
+    const ldep = Math.min(depth, T.lurkOdds.length-1);
+    // never in a colonnade: those three stand too close for anything to hang between them
+    phrase.lane = (!phrase.colonnade && phrase.shape !== "dive" && !quiet && Math.random() < T.lurkOdds[ldep])
+                ? lurker(x + phrase.nextGap*0.5, cy) : null; }
+  else {                                                                    // the phrase is done: open the floor
+    const ended = phrase.shape;                                            // the phrase that just closed
+    const clear = lastClear = draw1(CLEARS, lastClear);                    // what this clearing holds
+    const wide = (T.clearing[0] + Math.random()*(T.clearing[1]-T.clearing[0])) * (clear === "breath" ? 0.8 : 1) + (clear === "rest" ? 260 : 0);
+    const shape = lastShape = draw1(depth === 0 ? SHAPES.filter(t => t[0] !== "bunch") : SHAPES, lastShape);   // the shape of the cluster after it — no bunches among Roman columns
+    const colonnade = shape === "colonnade" || shape === "bunch";           // both walk the colonnade's path: fixed steps, fixed close gaps
+    const n = shape === "dive" ? (Math.random() < 0.4 ? 1 : Math.random() < 0.58 ? 2 : 3) : shape === "colonnade" ? 3 : shape === "bunch" ? 2 + (depth > 0 && Math.random() < 0.4 ? 1 : 0)
+            : shape === "long" ? 6 + Math.floor(Math.random()*3) : shape === "wave" ? 3 + Math.floor(Math.random()*3) : 4 + Math.floor(Math.random()*3);
+    const space = shape === "long" ? 1.0 + Math.random()*0.15 : Math.random() < 0.25 ? 0.85 : Math.random() < 0.33 ? 1.25 : 1.0;
+    phrase = { n, left: n, nextGap: wide, colonnade, shape, space };
+    const kind = flierKind();
+    const flier = (at)=> demons.push({ x, y: 130 + Math.random()*(T.fireLine - 300), kind,
+                    v: T.demonSpeed*(0.8+Math.random()*0.5), ph: Math.random()*6, dead: 0, aimed: false, jinked: false, ty: null, x: at });
+    const dep = Math.min(depth, T.demonOdds.length-1);
+    // while the world is still turning over, the open floor stays empty — no soul, no hunter — so the
+    // first thing he meets in a new depth is the depth itself. wmix is 1 once the fade is done.
+    // the kinds of clearing: a breath (nothing), a soul alone, a guarded soul (the old rule), an ambush
+    // (two hunters, maybe no soul), a rest (the long floor, two souls, one hunter late)
+    let nH = 0, nS = 0, hAt = [];
+    if (clear === "soul"){ nS = 1; }
+    else if (clear === "guarded"){ nS = Math.random() < 0.35 ? 2 : 1; if (Math.random() < T.demonOdds[dep]){ hAt.push(0.50 + Math.random()*0.22);
+      if (Math.random() < T.demonOdds2[dep]) hAt.push(0.76 + Math.random()*0.20); } }
+    else if (clear === "ambush"){ nS = Math.random() < 0.5 ? 1 : 0; hAt.push(0.36 + Math.random()*0.14, 0.72 + Math.random()*0.18); }
+    else if (clear === "rest"){ nS = 2; hAt.push(0.80 + Math.random()*0.15); }
+    if (!quiet) for (const f of hAt) flier(x + wide*f);
+    if (nS > 0 && nS < 2 && Math.random() < depth*0.1) nS++;                   // deeper, a few more souls: about one more per level (Jerry, 2026-09-26)
+    if (quietSoul) nS = 0;
+    const ss = []; for (let i=0;i<nS;i++) ss.push(0.22 + Math.random()*0.40);
+    if (ended === "dive" && !quietSoul && Math.random() < 0.6){ ss.length = Math.min(ss.length, 1); ss.push(0.10 + Math.random()*0.08); }   // often one right under the dive, where he already is
+    ss.sort();                                                                // anywhere in the first two thirds: room to climb out
+    if (ss.length === 2 && ss[1] - ss[0] < 0.18) ss[1] = Math.min(0.64, ss[0] + 0.18);
+    for (const f of ss){ const sx = x + wide*f;
+      souls.push({ x: sx, y: T.fireLine + 30, state:"wait", t0:0, ph:Math.random()*6, kind: SOULS[Math.random()<0.5?0:1] });
+      lastSoulX = Math.max(lastSoulX, sx); }
+  }
+}
+/* every picture the game can draw. A run that starts before the stone has loaded (a quick "B" on a phone) is
+   killed by columns it cannot see, and kneels its souls invisibly — so the title waits for all of it */
+const imgDone = (im) => im && im.complete && im.naturalWidth > 0;
+const allDone = (d) => { for (const k in d) if (!imgDone(d[k])) return false; return true; };
+/* what one depth needs: its stone, its flier, its far country. On public wifi the whole game (26 MB) took an age,
+   so the title waits only for the depth you begin at, and a depth's TURN waits for that depth — the run
+   carries on in the old world until the new one has arrived */
+function readyFor(d){
+  if (!(lready && ready === ORDER.length)) return false;                                            // (the souls are not waited for: an unloaded soul simply is not drawn yet, and they are the biggest files)
+  switch (d){
+    case 0: return cready && dready;
+    case 1: return SPIRES.every(S => S.ready) && vready && abready;
+    case 2: return TEETH.every(S => S.ready) && fready && bbready;
+    case 3: return HIVE.every(S => S.ready) && allDone(bimg) && imgDone(hbg);
+    case 4: return FUNGUS.every(S => S.ready) && allDone(timg) && imgDone(dbg);
+    default: return ICE.every(S => S.ready) && allDone(faimg) && imgDone(pbg) && bready === BOSS_RIG.order.length; } }
+function assetsReady(){ return readyFor(jumpBoss ? 5 : jumpPre ? jump + 1 : jump) && (!jumpPre || readyFor(jump)); }
+/* what, by name, has not arrived — shown under GATHERING when it drags on, so a phone can tell us */
+function missingFor(d){
+  const out = [], name = (src) => (src || "?").split("/").pop().split("?")[0];
+  if (!lready) out.push("logo"); if (ready !== ORDER.length) out.push("michael");
+  const sets = { 0: [["column", cready], ["demon1", dready]], 1: [["vulture", vready], ["ashfall", abready]], 2: [["fish", fready], ["brimstone", bbready]],
+                 3: [["hive_pano", imgDone(hbg)]], 4: [["drowned_pano", imgDone(dbg)]], 5: [["pit_pano", imgDone(pbg)], ["boss " + bready + "/" + BOSS_RIG.order.length, bready === BOSS_RIG.order.length]] };
+  for (const [n, ok] of (sets[d] || sets[5])) if (!ok) out.push(n);
+  const pieces = { 1: SPIRES, 2: TEETH, 3: HIVE, 4: FUNGUS, 5: ICE }[d]; if (pieces) pieces.forEach(S => { if (!S.ready) out.push(name(S.src)); });
+  const dict = { 3: bimg, 4: timg, 5: faimg }[d]; if (dict) for (const k in dict) if (!imgDone(dict[k])) out.push(k);
+  return out; }
+function flap(){
+  if (state === "ready" && !assetsReady()) return;                                  // not yet: the pictures are still coming in
+  if (state === "ready"){ AD.runs++; chPing(); stopTitle(); playTrack(MUSIC[jumpBoss ? 5 : jump] || SND.l1); state = "playing"; phrase = { n: 2, left: 2, nextGap: 0, colonnade: false, shape: "wave", space: 1 }; lastSoulX = -1e9;
+    try{ localStorage.setItem("michaelmas.speed", speed > 1 ? "fast" : "normal"); }catch(e){}
+    launchAt = now; launchX = M.x;
+    if (jump > 0 || jumpPre){ depth = jump; depthAt = -99;                              // begin at the chosen depth —
+      score = jumpPre ? T.levelAt[jump+1] - (jump === 4 ? 20 : 6) : jumpBoss ? T.levelAt[5] + T.bossAfter - 3 : T.levelAt[jump]; }   // or six columns short of the next one (5.5: twenty, to hear the Pit's music arrive) — or three short of the Amalgam
+    spawnN = score; spawnPair(W + 120); }
+  if (state === "playing"){ const fight = boss && boss.phase === "fight"; if (fight && now < stunUntil) return;      // clawed: the tap does nothing while it drags him
+    M.vy = fight ? T.flap*T.fightFlap : T.flap; tapAt = now; if (fight) M.vx = T.fightPush; }   // the lunge: long and flat, not stacked
+  else if (state === "won" && now - wonAt > 2.5){ reset(); }
+  else if (state === "over" && now - dead > 1.8 && !adPending){ reset(); }
+}
+document.addEventListener("contextmenu", e=>e.preventDefault());                          // no long-press menu, ever
+document.addEventListener("touchstart", e=>{ if (e.target === cv) e.preventDefault(); }, { passive:false });   // and no selection from a held touch
+cv.addEventListener("pointerdown", e=>{ e.preventDefault();
+  const r = cv.getBoundingClientRect(), px = (e.clientX - r.left)/r.width*W, py = (e.clientY - r.top)/r.height*H;
+  if (state === "demo"){ if (now - demoAt < 1.2) return;
+    if (DEMO_STORE && Math.abs(py - DEMO_BTN.y) < DEMO_BTN.h/2 + 8 && Math.abs(px - W/2) < DEMO_BTN.w/2 + 8){ window.open(DEMO_URL, "_blank"); return; }
+    if (now - demoAt > 2.5) reset(); return; }
+  if (state === "gate"){ entered = true; state = "ready"; titleAt = now; titleBeat = TITLE_BEAT; playTitle(TITLE_IN); sfxUnlock(); return; }   // the first tap: in, and the drums begin
+  if (CH.open) return;                                                                 // the church list is up: the game waits
+  if (state === "ready" && px > W - 64 && py < 64){ setMuted(!muted); return; }     // the corner: sound on, sound off
+  if (state === "ready" && NATIVE && ADP && py > CHB.y + CHB.h + 6 && Math.abs(px - W/2) < 80){ na({ cmd: "adprivacy", key: "" }); return; }   // AD PRIVACY: Google's own box
+  if (state === "ready" && NATIVE && chList().length && CHB.w && Math.abs(px - W/2) < CHB.w/2 + 14 && py > CHB.y - 12 && py < CHB.y + CHB.h + 12){ chOpen(false); return; }   // the PICK CHURCH button
+  if (state === "ready" && now - titleAt < 0.5) return;                              // (a half-second after entering: the same tap, twice)
+  if (paused){ paused = false; last = 0; if (track) track.play().catch(()=>{}); if (under) under.play().catch(()=>{}); return; }   // any tap resumes (last=0: no giant dt on the way back)
+  if (state === "playing" && px < 64 && py < 64){ paused = true; if (track) track.pause(); if (under) under.pause(); return; }   // the mark in the corner holds the world
+  if (state === "ready" && lready && Math.abs(py - (SPD.y - 8)) < 26){      // NORMAL | FAST: a tap only picks the pace; the next tap anywhere else begins (Jerry, 2026-10-23)
+    if (Math.abs(px - (W/2 - SPD.dx)) < 66){ speed = 1; return; }
+    if (Math.abs(px - (W/2 + SPD.dx)) < 66){ speed = FAST; return; } }
+  if (state === "ready" && lready && !RELEASE && py > PICK.y + 28 && py < PICK.y + 70){  // the transition row: 1.8, 2.8 ... (testing)
+    for (let i=0;i<T.levelAt.length-1;i++) if (Math.abs(px - (PICK.x0 + (i+0.5)*PICK.gap)) < 20){ jump = i; jumpPre = true; jumpBoss = false; return; }
+    if (Math.abs(px - (PICK.x0 + 5.5*PICK.gap)) < 20){ jump = 5; jumpPre = false; jumpBoss = true; return; } }
+  if (state === "ready" && lready && !RELEASE && Math.abs(py - (PICK.y - 8)) < 34){       // the level picker, with a finger-sized target
+    for (let i=0;i<T.levelAt.length;i++) if (Math.abs(px - (PICK.x0 + i*PICK.gap)) < 26){ jump = i; jumpPre = false; jumpBoss = false; return; } }
+  flap(); });
+window.addEventListener("keydown", e=>{ if (e.code==="Space" && !e.repeat){ e.preventDefault(); if (state === "gate"){ entered = true; state = "ready"; titleAt = now; titleBeat = TITLE_BEAT; playTitle(TITLE_IN); sfxUnlock(); } else if (paused){ paused = false; last = 0; if (track) track.play().catch(()=>{}); if (under) under.play().catch(()=>{}); } else flap(); }
+  if (e.code==="KeyP" && !e.repeat && state === "playing"){ paused = !paused; if (!paused){ last = 0; if (track) track.play().catch(()=>{}); if (under) under.play().catch(()=>{}); } else if (track) track.pause(); if (under) under.pause(); } });
+function bleed(){ bleedUntil = now + 0.45;                                        // a hit: the bar bleeds for half a second, and a few stains land on it
+  for (let i = 0; i < 4; i++) barBlood.push({ x: W/2 - 90 + 180*Math.max(0, power)/T.power + Math.random()*26, y: 104 + (Math.random()-0.5)*9,
+    t: 0, life: 2.0 + Math.random()*1.5, r: 0.6 + Math.random()*1.3, drop: false }); }
+function withstood(why){ if (state !== "playing") return; state = "over"; dead = now; M.why = why; fallVerse = nextFallVerse(); setTimeout(stopTrack, 600);
+  { const fell = dead; setTimeout(() => { if (state === "over" && dead === fell) adAfterOver(); }, 1300); }
+  twinkle(M.x, M.y, "#FFF6DC", 40, 50); burst(M.x, M.y, "#F2DFA6", 20);
+  if (jump === 0 && !jumpPre){
+    if (speed > 1){ if (pts() > bestFast){ bestFast = pts(); try{ localStorage.setItem("michaelmas.bestfast", String(bestFast)); }catch(e){} } }
+    else if (pts() > best){ best = pts(); try{ localStorage.setItem("michaelmas.best", String(best)); }catch(e){} } } }
+function twinkle(x, y, color, n, spread){
+  for (let i=0;i<n;i++){ const a = Math.random()*6.3, r = Math.random()*(spread||24);
+    bursts.push({ x: x+Math.cos(a)*r, y: y+Math.sin(a)*r, vx:(Math.random()-0.5)*40, vy:-30-Math.random()*70,
+                  life:0.9+Math.random()*1.1, t:0, r:1.2+Math.random()*2.2, color, tw: 6+Math.random()*10, g:0 }); } }
+function burst(x, y, color, n, o){ o = o || {};
+  const v0 = o.v0 ?? 60, v1 = o.v1 ?? 320, r0 = o.r0 ?? 1.5, r1 = o.r1 ?? 4.5, gg = o.g ?? 300, l0 = o.l0 ?? 0.7, l1 = o.l1 ?? 1.3;
+  for (let i=0;i<n;i++){ const a = Math.random()*6.3, v = v0 + Math.random()*(v1-v0);
+    bursts.push({ x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v - (o.up ?? 80), life:l0+Math.random()*(l1-l0), t:0,
+                  r:r0+Math.random()*(r1-r0), color, g:gg }); } }
+/* what a pillar throws off when he clips it — stone chips fly, honey does not */
+const HITFX = [
+  { c:"#C9D6E8", n:16 },                                                     // I: pale stone
+  { c:"#C9D6E8", n:16 },                                                     // II: ash
+  { c:"#FFB265", n:16 },                                                     // III: hot iron scale
+  { c:"#E8A31E", n:14, o:{ v0:25, v1:120, r0:1.1, r1:3.0, g:620, up:20, l0:0.9, l1:1.6 } },  // IV: flecks of honey, heavy and slow
+  { c:"#9DB88A", n:14, o:{ v0:30, v1:150, r0:1.2, r1:3.4, g:520, up:30, l0:0.8, l1:1.4 } },  // V: sodden wood, it barely flies
+  { c:"#BFE0FF", n:18, o:{ v0:80, v1:360, r0:1.0, r1:3.0, g:380, up:90, l0:0.6, l1:1.1 } },  // VI: ice, it shatters
+];
+
+/* ============================ the loop ============================ */
+function drawFlier(ctx, d){
+  const dy = flierY(d, now);
+  ctx.save();
+  // clamped: when HE dies the world stops being cleaned up, and an unclamped k grew the puff into a screen-sized bird
+  if (d.dead){ const k = Math.min(1, (now - d.dead)/0.5); ctx.globalAlpha = 1-k;
+    /* ctx.translate(d.x, dy); ctx.rotate(k*0.45); ctx.translate(-d.x, -dy); */ }   // the death tilt is off for now (uncomment to bring it back): it just fades
+  if (d.kind === "bee") drawBee(ctx, d.x, dy, now, d.ph);
+  else if (d.kind === "toad") drawToad(ctx, d.x, dy, now, d.ph);
+  else if (d.kind === "fallen") drawFallen(ctx, d.x, dy, now, d.ph);
+  else if (d.kind === "fish") drawFish(ctx, d.x, dy, now, d.ph);
+  else if (d.kind === "vulture") drawVulture(ctx, d.x, dy, now, d.ph);
+  else if (dready){ const fi = Math.floor((now*14 + d.ph*3) % D.frames);
+    ctx.translate(d.x, dy); ctx.scale(-DS1, DS1); ctx.translate(-D.anchor[0], -D.anchor[1]);
+    ctx.drawImage(dimg, fi*D.w, 0, D.w, D.h, 0, 0, D.w, D.h);
+    if (SOLID) ctx.drawImage(dimg, fi*D.w, 0, D.w, D.h, 0, 0, D.w, D.h); }   // a second pass: the keyed edges are soft and read see-through
+  ctx.restore();
+}
+/* a soul's pool of dark and her bloom, painted ONCE each (a radial gradient built per soul per frame was the dearest thing
+   in the boss fight, where two dozen kneel) and drawn scaled: 78 and 62 px radii at unit scale, 256 px sprites */
+const POOL_SPR = document.createElement("canvas"), BLOOM_SPR = document.createElement("canvas");
+{ POOL_SPR.width = POOL_SPR.height = 256; const c = POOL_SPR.getContext("2d"), R = 128;
+  const pool = c.createRadialGradient(R, R, R*10/78, R, R, R); pool.addColorStop(0, `rgba(6,4,10,${POOLA})`); pool.addColorStop(1, "rgba(6,4,10,0)");
+  c.fillStyle = pool; c.fillRect(0, 0, 256, 256);
+  BLOOM_SPR.width = BLOOM_SPR.height = 256; const b = BLOOM_SPR.getContext("2d");
+  const bloom = b.createRadialGradient(R, R, R*4/62, R, R, R); bloom.addColorStop(0, "rgba(150,205,255,0.55)"); bloom.addColorStop(0.5, "rgba(110,165,235,0.20)"); bloom.addColorStop(1, "rgba(90,140,220,0)");
+  b.fillStyle = bloom; b.fillRect(0, 0, 256, 256); }
+function drawSoul(wg, so){                                                  // on the world layer, or — for the three at its toes — straight onto the screen above the boss
+    const Sk = so.kind; if (!Sk.ready) return;
+    let fi, alpha = so.born ? Math.min(1, (now - so.born)/1.4) : 1;                    // a soul that arrives mid-fight fades in
+    if (so.state === "wait"){ const n = Sk.wait, k = Math.floor((now*6 + so.ph) % (2*n-2)); fi = k < n ? k : 2*n-2-k; }
+    else { const uu = (now - so.t0)*24; fi = Sk.wait + Math.min(Sk.ascend-1, Math.floor(uu)); alpha = Math.max(0, 1 - (uu - Sk.ascend)/18); }
+    wg.save(); wg.globalAlpha = alpha;
+    if (so.state === "wait"){                                                // a pool of dark under her, so the fire does not eat her
+      const k = (so.sc || 0.52)/0.52, pr = 78*k;                                          // a small far soul casts a small pool
+      wg.globalAlpha = alpha*Math.min(1,k); wg.drawImage(POOL_SPR, so.x - pr, so.y - 40*k - pr, 2*pr, 2*pr); wg.globalAlpha = alpha; }
+    // her halo is a bloom painted behind her — NOT shadowBlur, which would trace the sprite frame's edge as a rectangle
+    const bk = (so.sc || 0.52)/0.52, br = 62*bk;
+    wg.globalCompositeOperation = "lighter"; wg.globalAlpha = alpha*Math.min(1,bk);
+    wg.drawImage(BLOOM_SPR, so.x - br, so.y - 46*bk - br, 2*br, 2*br);
+    wg.globalCompositeOperation = "source-over"; wg.globalAlpha = alpha;
+    const frame = soulFrame(Sk, fi);                                          // her feet were cut off square: dissolve them
+    const ssc = so.sc || 0.52; wg.translate(so.x, so.y); wg.scale(ssc, ssc); wg.translate(-Sk.cx, -Sk.feet);
+    wg.drawImage(frame, 0, 0);
+    wg.globalCompositeOperation = "lighter"; wg.globalAlpha = alpha*0.7;       // and lit from inside
+    wg.drawImage(frame, 0, 0); wg.restore();
+}
+let now = 0, last = 0, t0 = performance.now()/1000, wmix = 1, panoX = 0, frameN = 0;
+/* one bad frame must not stop the world: an exception here used to end the animation loop — the picture froze while
+   the music played on (the phone, 2026-09-23). Now it is logged (with its stack, which window.onerror hides for a
+   file:// page) and the next frame is asked for anyway. */
+let frameErr = 0;
+/* the words that greet each victory: the first win is always Matthew 25:23, then the rest in turn, never twice in a row */
+const VERSES = [
+  { lines: ["Well done,", "good and faithful servant"], ref: "MATTHEW 25:23" },
+  { lines: ["I have fought", "the good fight,", "I have finished the race,", "I have kept the faith"], ref: "2 TIMOTHY 4:7" },
+  { lines: ["Thanks be to God,", "who gives us the victory"], ref: "1 CORINTHIANS 15:57" },
+  { lines: ["If God is for us,", "who can be against us?"], ref: "ROMANS 8:31" },
+  { lines: ["Be strong", "and of good courage;", "the Lord your God", "is with you"], ref: "JOSHUA 1:9" },
+  { lines: ["Greater is he", "that is in you,", "than he that is", "in the world"], ref: "1 JOHN 4:4" },
+  { lines: ["In all these things", "we are more", "than conquerors"], ref: "ROMANS 8:37" },
+  { lines: ["Be not overcome of evil,", "but overcome evil", "with good"], ref: "ROMANS 12:21" },
+  { lines: ["The Lord is my light", "and my salvation;", "whom shall I fear?"], ref: "PSALM 27:1" },
+  { lines: ["They shall mount up", "with wings as eagles"], ref: "ISAIAH 40:31" },
+  { lines: ["The Lord shall", "fight for you,", "and ye shall", "hold your peace"], ref: "EXODUS 14:14" },
+  { lines: ["This is the victory", "that overcometh", "the world,", "even our faith"], ref: "1 JOHN 5:4" },
+  { lines: ["Fear thou not;", "for I am with thee"], ref: "ISAIAH 41:10" },
+  { lines: ["Fight the good fight", "of faith"], ref: "1 TIMOTHY 6:12" },
+];
+/* the words after each fall (1.1, Jerry 2026-10-25): encouragement, in turn, never twice in a row, above PLAY AGAIN */
+const FALL_VERSES = [
+  { lines: ["Though he fall,", "he shall not be", "utterly cast down"], ref: "PSALM 37:24" },
+  { lines: ["A just man falleth", "seven times,", "and riseth up again"], ref: "PROVERBS 24:16" },
+  { lines: ["When I fall,", "I shall arise"], ref: "MICAH 7:8" },
+  { lines: ["The Lord upholdeth", "all that fall"], ref: "PSALM 145:14" },
+  { lines: ["Weeping may endure", "for a night, but joy", "cometh in the morning"], ref: "PSALM 30:5" },
+  { lines: ["His compassions fail not.", "They are new", "every morning"], ref: "LAMENTATIONS 3:22-23" },
+  { lines: ["I will never leave thee,", "nor forsake thee"], ref: "HEBREWS 13:5" },
+  { lines: ["Yet will I", "not forget thee"], ref: "ISAIAH 49:15" },
+  { lines: ["My grace is", "sufficient for thee"], ref: "2 CORINTHIANS 12:9" },
+  { lines: ["Wait on the Lord:", "be of good courage"], ref: "PSALM 27:14" },
+  { lines: ["Fight the good fight", "of faith"], ref: "1 TIMOTHY 6:12" },
+  { lines: ["I can do all things", "through Christ which", "strengtheneth me"], ref: "PHILIPPIANS 4:13" },
+  { lines: ["Be strong in the Lord,", "and in the power", "of his might"], ref: "EPHESIANS 6:10" },
+  { lines: ["Put on the whole", "armour of God"], ref: "EPHESIANS 6:11" },
+  { lines: ["Resist the devil,", "and he will flee", "from you"], ref: "JAMES 4:7" },
+  { lines: ["Let us not be weary", "in well doing"], ref: "GALATIANS 6:9" },
+  { lines: ["I press toward", "the mark"], ref: "PHILIPPIANS 3:14" },
+  { lines: ["Run with patience", "the race that is", "set before us"], ref: "HEBREWS 12:1" },
+];
+let fallVerse = FALL_VERSES[0];
+function nextFallVerse(){ let i = 0; try{ i = parseInt(localStorage.getItem("michaelmas.fallverse") || "0", 10) || 0; }catch(e){}
+  const v = FALL_VERSES[i % FALL_VERSES.length]; try{ localStorage.setItem("michaelmas.fallverse", String((i + 1) % FALL_VERSES.length)); }catch(e){} return v; }
+let verse = VERSES[0];
+function nextVerse(){ let i = 0; try{ i = parseInt(localStorage.getItem("michaelmas.verse") || "0", 10) || 0; }catch(e){}
+  const v = VERSES[i % VERSES.length]; try{ localStorage.setItem("michaelmas.verse", String((i + 1) % VERSES.length)); }catch(e){} return v; }
+function frame(ms){ try { frameBody(ms); } catch(e){ frameErr++; if (frameErr <= 5) console.error("frame:", e && (e.stack || e.message || e)); last = 0; requestAnimationFrame(frame); } }
+function frameBody(ms){
+  if (++frameN === 1 && window.NATIVE_APP) console.log("frame 1: state=" + state + " lready=" + lready);
+  if (frameN === 150 && window.NATIVE_TEST){ const c = document.getElementById("cv"), r = c.getBoundingClientRect();   // the app's test mode: it taps itself through the gate
+    for (const t of ["pointerdown", "pointerup"]) c.dispatchEvent(new PointerEvent(t, { clientX: r.left + r.width/2, clientY: r.top + r.height/2, bubbles: true, pointerId: 1, isPrimary: true }));
+    console.log("test: tapped the gate, state=" + state); }
+  now = ms/1000 - t0; const dt = Math.min(0.033, last ? now-last : 0.016)*(state === "playing" ? speed : 1); last = now;   // FAST is a true fast-forward: every path is the same, sooner
+  const playing = state === "playing" && !paused, scroll = playing ? (boss && boss.phase !== "enter" ? 0 : T.scroll) : 0;
+  const blaze = Math.max(0, Math.min(1, (blazeUntil - now)/0.6)) * (blazeUntil > now ? 1 : 0);
+  wmix = depth === 0 ? 1 : Math.max(0, Math.min(1, (now - depthAt)*speed/T.fade[Math.min(depth, T.fade.length-1)]));  // 1 = fully in this depth — the fade runs at game speed
+  const fireA = depth === 0 ? 1 : depth === 1 ? Math.max(0, 1 - wmix/0.6) : 0;   // the fire is out by the time the turn is 60% done — it goes before the ash settles
+
+  /* ---- Michael ---- */
+  if (state === "ready"){ M.x = W*0.5; M.y = H*0.53 + 6*Math.sin(now*2.2); M.vy = 0; }
+  else if (playing){
+    const fu = now - tapAt, floatK = (boss && boss.phase === "fight" && fu > 0.25 && fu < 1.0) ? T.fightFloat : 1;   // fight only: after the lunge he hangs a moment before he drops
+    M.vy = Math.min(M.vy + T.gravity*floatK*(now < softUntil ? 0.3 : 1)*dt, T.vmax); M.y += M.vy*dt;   // (softUntil: after a shove from above, gravity eases for a moment so the shove and the fall do not stack)
+    if (M.y < 48){ M.y = 48; M.vy = Math.max(M.vy, 0); }              // soft ceiling, like the original
+    if (M.kb > 0) M.kb = Math.max(0, M.kb - T.recover*dt);                // clawing his way back after a hit
+    const lk = Math.min(1, (now - launchAt)/0.8), ease = 1 - Math.pow(1-lk, 3);
+    if (boss && boss.phase === "fight"){                                   // the fight: a tap also drives him FORWARD, and the pit drags him home
+      const homeK = now - tapAt < 0.32 ? 0.6 : 1;                                                  // (0.38: a real tug back between taps, but each lunge still gains)                                                  // while he keeps tapping the pit barely pulls: lunge on lunge carries him in; stop, and it throws him back
+      M.vx -= M.vx*T.fightDrag*dt; M.vx += (W*T.fightHomeX - M.kb - M.x)*T.fightHome*homeK*dt; M.x += M.vx*dt;
+      if (M.x > BOSS_FRONT + 160){ M.x = BOSS_FRONT + 160; M.vx = Math.min(M.vx, 0); }
+      if (M.x < 82){ M.x = 82; M.vx = Math.max(M.vx, 0); }                                          // and the recoil never throws him off the left of the screen
+      if (M.vx > 0 && bossSolidAt(M.x + 24, M.y - 12, 1, 26, true)){ M.x -= M.vx*dt; M.vx = 0; } }   // he cannot fly INTO its trunk or heads: where that paint begins is the wall, at whatever height he is
+    else if (!(boss && boss.phase === "dying")) M.x = launchX + (W*0.30 - launchX)*ease - M.kb;   // he pulls out of the title into his station — but not while the beast falls: then he holds, below
+
+    if (M.x < 30) withstood("dragged into the dark");
+    // the fire is a band, not a line: dipping into it burns power slowly, only deep in it takes him
+    const floorWhy = depth === 0 ? "taken by the fire" : depth === 1 ? "swallowed by the ash" : depth === 2 ? "lost in the brimstone" : depth === 3 ? "drowned in the comb" : depth === 4 ? "gone under the black water" : "frozen in the pit";
+    if (boss && boss.phase !== "enter"){ if (M.y > T.fireLine + 24){ M.y = T.fireLine + 24; M.vy = Math.min(M.vy, 0); } }   // the fight, and the thing's death throes: the black water bears him up; only the Amalgam can kill him here
+    else if (M.y + T.bodyR > T.fireLine + 130) withstood(floorWhy);
+    else if (M.y + T.bodyR > T.fireLine + 20 && blaze <= 0){ power -= 30*dt; hitFlash = Math.max(hitFlash, 0.12);
+      if (power <= 0) withstood(floorWhy); }
+    if (boss && boss.phase === "dying"){
+      // the beast is falling: he holds where the victory will find him. Left to the fight's own rules he sank to
+      // the water and drifted into the bottom corner, because nobody is tapping while it dies (Jerry)
+      const ease2 = Math.min(1, 2.2*dt);
+      // he waits out the fall clear of it, then sets off for the middle BEFORE the beast is gone — a slow
+      // rise of a second and a half rather than a dash once the words appear
+      const u = Math.max(0, Math.min(1, (boss.t - boss.dieT - 1.1)/1.6)), rise = u*u*(3 - 2*u);
+      M.x += (W*(HOLD_X + (0.5 - HOLD_X)*rise) - M.x)*ease2;
+      M.y += (H*(HOLD_Y + (0.40 - HOLD_Y)*rise) + 8*Math.sin(now*1.6) - M.y)*ease2;
+      M.vy = 0; M.vx = 0;
+    }
+  } else if (state === "won"){                                           // he rises to the middle of the emptied pit, glowing
+    const k = Math.min(1, (now - wonAt)/2.2), e = 1 - Math.pow(1-k, 3);
+    M.x += (W*0.5 - M.x)*Math.min(1, 2.2*dt); M.y += (H*0.40 + 8*Math.sin(now*1.6) - M.y)*Math.min(1, 2.2*dt); M.vy = 0;
+    if (Math.random() < 0.7) twinkle(M.x + (Math.random()-0.5)*90, M.y + (Math.random()-0.5)*110, Math.random()<0.5 ? "#FFF6DC" : "#FFD98A", 1, 8);
+    for (const so of souls) if (so.state === "rise" && now > so.t0){                         // the souls of the pit go up around him
+      const u = now - so.t0; so.y -= 240*dt; so.x += 45*dt + 40*Math.sin(u*3)*dt;
+      if (u > 0.5 && Math.random() < 0.6) twinkle(so.x + (Math.random()-0.5)*30, so.y - 50 - Math.random()*70, "#DFF1FF", 1, 4);
+      if (!so.gone && u > so.kind.ascend/24 + 0.3){ so.gone = true; twinkle(so.x, so.y - 80, "#FFFFFF", 26, 40); } }
+  } else if (state === "demo"){                                          // the demo's end: he rises to the middle and holds
+    M.x += (W*0.5 - M.x)*Math.min(1, 2.2*dt); M.y += (H*0.30 + 8*Math.sin(now*1.6) - M.y)*Math.min(1, 2.2*dt); M.vy = 0;
+    if (Math.random() < 0.5) twinkle(M.x + (Math.random()-0.5)*90, M.y + (Math.random()-0.5)*110, Math.random()<0.5 ? "#FFF6DC" : "#FFD98A", 1, 8);
+  } else if (state === "over"){                                          // he goes out like a light
+    const k = now - dead;
+    M.vy = 0; M.y -= 70*dt;                                                // lifted, straight up
+    if (k < 1.3 && Math.random() < 0.8) twinkle(M.x + (Math.random()-0.5)*80, M.y + (Math.random()-0.5)*90, Math.random()<0.5 ? "#F2DFA6" : "#9BC6F0", 2, 6);
+  }
+  const vyn = Math.max(-1, Math.min(1, M.vy/700));
+  const tilt = S.tilt.step(state==="over" ? 0 : 0.26*vyn, dt);
+  const cape = S.cape.step(0.46*vyn + 0.05*Math.sin(2*Math.PI*0.7*now), dt);
+  const legs = S.legs.step(0.34*vyn + 0.03*Math.sin(2*Math.PI*0.9*now+1), dt);
+  const head = S.head.step(-0.55*tilt + 0.06*vyn, dt);
+  const headY = S.headY.step(-16*vyn, dt);
+  const u = now - tapAt, ph = 2*Math.PI*1.4*now, env = u < 0 ? 0 : Math.exp(-u/0.26);
+  const stroke = u < 0 ? 0 : 0.55*Math.sin(Math.min(1,u/0.30)*Math.PI)*Math.exp(-u/0.5);
+  const near = 0.16*Math.sin(ph)*(1-0.7*env) + stroke, far = 0.16*Math.sin(ph-0.4)*(1-0.7*env) + stroke*0.85;
+  const drift = 10*vyn;                                                  // cosmetic: dips forward on the dive
+  const hx = M.x + drift, hy = M.y;
+
+  /* ---- world ---- */
+  if (playing){
+    for (const c of cols){ c.x -= scroll*dt; if (c.bob) c.cy = c.bob.cy0 + c.bob.A*Math.sin(now*c.bob.w + c.bob.p); }
+    for (const so of souls) so.x -= scroll*dt;
+    for (const d of demons){ const beat = Math.max(0, Math.sin((now*14 + d.ph*3)/D.frames*2*Math.PI));
+      d.x -= (scroll + d.v*(0.5 + 1.1*beat))*dt;                       // a lunge on every downstroke
+      if (d.thread){                                                     // the passages: it flies a straight line from the lane it just
+        let a = null, p = null, b = null;                                // left to the lane it is entering — even when it changes side
+        for (const c of cols){ if (c.x < d.x - 8){ if (!a || c.x > a.x){ b = a; a = c; } else if (!b || c.x > b.x) b = c; } else if (!p || c.x < p.x) p = c; }
+        if (a){
+          // it keeps to the side AWAY from the gap after this one, so the lane it leaves him is the one that leads onward
+          const side = (b && a.x - b.x < 420) ? (b.cy < a.cy ? 1 : -1) : d.side;
+          if (d.lastA !== a){                                            // a new pair ahead: the one just crossed becomes the start of the line
+            d.fromLane = d.lastA ? d.lastA.cy + d.lastSide*d.off : d.y; d.fromX = d.lastA ? d.lastA.x : d.x;
+            d.lastA = a; }
+          d.side = side; d.lastSide = side;
+          const la = a.cy + side*d.off;
+          if (p && p.x - a.x < 420 && d.fromX != null){ const t = Math.min(1, Math.max(0, (d.fromX - d.x)/(d.fromX - a.x)));
+            d.ty = d.fromLane + (la - d.fromLane)*t; }                   // same cluster: a diagonal from the old lane to the new
+          else d.ty = la; } }
+      if (!d.aimed && d.x < W + 40){ d.aimed = true; d.ty = M.y + (Math.random()-0.5)*40;   // comes in at his height — eased, not snapped
+        d.jink = (Math.random() < 0.5 ? -1 : 1)*(50 + Math.random()*30); }
+      if (d.aimed && !d.jinked && d.x - M.x < 190){ d.jinked = true;       // then, sometimes, breaks high or low, off the blade line
+        if (Math.random() < T.jinkOdds) d.ty = Math.max(90, Math.min(T.fireLine - 80, d.y + d.jink)); }
+      const vy = d.thread ? 260 : 300;                                   // a threader glides: its line between gaps is a diagonal, this only caps it
+      if (d.ty != null) d.y += Math.max(-vy*dt, Math.min(vy*dt, d.ty - d.y)); }
+    nextX -= scroll*dt; lastSoulX -= scroll*dt; panoX += scroll*0.12*dt;     // the range drifts, far away
+    if (!boss && nextX < W + 120 - phrase.nextGap) spawnPair(nextX + phrase.nextGap);
+    cols = cols.filter(c => c.x > -120); souls = souls.filter(so => so.x > -140 && !(so.state==="rise" && (so.y < -160 || now - so.t0 > so.kind.ascend/24 + 1.2)));
+    demons = demons.filter(d => d.x > -160 && !(d.dead && now - d.dead > 0.5));   // (and while he falls, the draw clamps them)
+    /* columns: pass = point, touch = withstood */
+    for (const c of cols){
+      const half = pairHalf(c);
+      if (!c.passed && c.x + half < hx){ c.passed = true; score++;
+        if (!boss && depth === 5 && score >= T.levelAt[5] + T.bossAfter && bready === BOSS_RIG.order.length) startBoss();   // sixty columns into the Pit, it comes
+        if (depth === 4 && track === SND.l1) quietTwinsLoad("l1");                   // the Pit nears: fetch the quiet twins now
+        if (depth === 4 && track === SND.l1 && !preFaded && score >= T.levelAt[5] - 3){ preFaded = true; gainTo("l1", 0.12, 6.0); }   // and where it can fade: the music starts sinking three columns before the turn, so the Pit's swells over near-silence
+        if (DEMO && depth === 1 && score >= T.levelAt[2] && state === "playing"){ state = "demo"; demoAt = now; setTimeout(stopTrack, 900); }   // the demo ends at the door of the third realm
+        if (state === "playing" && depth + 1 < T.levelAt.length && score >= T.levelAt[depth+1] && readyFor(depth+1)){ depth++; depthAt = now; wmix = 0;
+          if (MUSIC[depth]) playTrack(MUSIC[depth], true);                          // the music turns with the world: in strong, over the old
+          // wmix is worked out at the top of the frame, before this runs: without resetting it here the
+          // new depth draws fully formed for exactly one frame, which reads as a flash
+          demons = demons.filter(d => d.x < W - 10);                            // the last depth's monsters do not come in
+          souls  = souls.filter(so => so.x < W - 10 || so.state === "rise");      // nor its souls: the new world comes in empty
+          // nor its stone: what is not yet on screen is gone, and the first pair of the new world is placed to
+          // ENTER THE SCREEN the moment the turn is complete — the world changes with nothing in it
+          cols = cols.filter(k => k.x < W - 10);
+          const lastX = cols.length ? Math.max(...cols.map(k => k.x)) : nextX, fadeT = T.fade[Math.min(depth, T.fade.length-1)];
+          nextX = lastX; lastSoulX = -1e9;
+          phrase = { n: 2, left: 2, colonnade: false, shape: "wave", space: 1,
+                     nextGap: Math.max(T.clearing[0], (fadeT - 0.45*speed)*T.scroll - lastX + W) }; } }   // at the screen's edge just as the turn completes (it starts in during the last half-second of the fade: waiting past the end read as a lull)   // the world changes underneath him
+      const reachX = c.sp ? Math.max(c.sp.w, (c.sp2 || c.sp).w)*(c.sp.s || 1)*c.fat/2 : half;
+      if (Math.abs(hx - c.x) < reachX + T.bodyR*0.8){                                 // (no free pass while he reels from a demon: stone is stone — Jerry, 2026-09-26, on trial)
+        const top = c.cy - T.gap/2, bot = c.cy + T.gap/2;
+        // the painted pieces collide with their PICTURE: a thin icicle, a split tip, a tapered point are exactly
+        // as deadly as they look, no more. Only the plain column of Depth I is still a rectangle.
+        // the body the stone kills: a circle sitting right under his head (chest and face), turning with him —
+        // a face-first hit is a death, the trailing legs and cape are not (Jerry, 2026-09-25)
+        const cbx = hx + 10*Math.cos(tilt) + 12*Math.sin(tilt), cby = hy + 10*Math.sin(tilt) - 12*Math.cos(tilt);
+        const hitTop = c.sp ? pieceHits(c.sp,  c.x, top, false, c.fat, cbx, cby) : cby - T.bodyR*0.8 < top;
+        const hitBot = c.dive ? false : c.sp ? pieceHits(c.sp2 || c.sp, c.x, bot, true, c.fat, cbx, cby) : cby + T.bodyR*0.8 > bot;
+        // his HEAD, 70px above the body he is judged by: it clipped the stone for free. A head knock hurts him (once per
+        // column) and throws him down — it does not kill, the body does (Jerry, 2026-09-25)
+        // measured on the sprite: his head sits 10 right and 38 above the body point in his own frame, and turns with him (tilt)
+        const hdx = hx + 10*Math.cos(tilt) + 38*Math.sin(tilt), hdy = hy + 10*Math.sin(tilt) - 38*Math.cos(tilt), hr = 9;                                                             // the head alone, a small circle: the wing beside it does not count (Jerry)
+        const headTop = !hitTop && !c.headHit && (c.sp ? pieceHits(c.sp, c.x, top, false, c.fat, hdx, hdy, hr) : hdy - hr < top);
+        if (headTop && !hitBot && now > graceUntil){ c.headHit = true;                                          // (no crack: the stone did not break him — Jerry)
+          power -= T.headHit; bleed(); hitFlash = 0.35; M.vy = Math.max(M.vy, 60); graceUntil = now + T.grace; M.kb += T.knockback*0.2;   // a nudge (a fifth of the first try, then a smidge more)
+          burst(hdx, hdy - 10, "#FFD9A0", 12, { v0:60, v1:200, r0:1.0, r1:2.4, l0:0.3, l1:0.6 });
+          if (power <= 0) withstood("broken on the stone"); }
+        // his FEET, trailing low and behind: from Depth II on, dragging them over the bottom stone costs a little (Jerry, 2026-09-26)
+        if (depth >= 1 && !hitBot && !hitTop && !c.dive && !c.feetHit){
+          const fx = hx - 16*Math.cos(tilt) - 78*Math.sin(tilt), fy = hy - 16*Math.sin(tilt) + 78*Math.cos(tilt);   // (where the feet really hang: 78 below, 16 behind; a wider circle — it missed too often)
+          const feet = c.sp ? pieceHits(c.sp2 || c.sp, c.x, bot, true, c.fat, fx, fy, 15) : fy + 15 > bot;
+          if (feet){ c.feetHit = true; power -= T.feetHit; bleed(); hitFlash = 0.25; M.vy = Math.min(M.vy, -40); M.kb += T.knockback*0.08;   // a tiny jitter, under the head's
+            burst(fx, fy, "#FFD9A0", 8, { v0:40, v1:150, r0:0.8, r1:2.0, l0:0.25, l1:0.5 });
+            if (power <= 0) withstood("broken on the stone"); } }
+        if (hitTop || hitBot){ if (!c.cued){ c.cued = true; sfx(depth === 4 && hitTop ? "goo" : "col" + (Math.min(depth, 5) + 1)); }   // Depth V: the goo hangs, the stumps stand — goo gets the splat, wood the break
+          const fxk = HITFX[Math.min(depth, HITFX.length-1)];
+          burst(hx, hitBot ? bot : top, fxk.c, fxk.n, fxk.o);
+          if (T.columnKills){                                                  // the world kills outright; the creatures wear you down
+            hitFlash = 0.5; power = 0; withstood("withstood at the columns");
+          } else {
+            power -= T.columnHit; graceUntil = now + T.grace; hitFlash = 0.35; M.kb += T.knockback*0.6;
+            M.vy = hitBot ? -330 : 160;                                        // bounced off the stone
+            if (power <= 0) withstood("withstood at the columns");
+          }
+        }
+      }
+    }
+    /* souls: reach her and she rises; he blazes */
+    if (now - lastRescue > 0.7){ let pick = null, best = 90*90;                         // one at a time: the nearest, then a beat before the next can go
+      for (const so of souls){ if (so.state !== "wait") continue;
+        const dx = so.x - hx, dy = (so.y - 70) - hy, dd = dx*dx + dy*dy; if (dd < best){ best = dd; pick = so; } }
+      if (pick){ const so = pick; so.state = "rise"; so.t0 = now; saved++; scoreGlow = now; lastRescue = now; sfx("soul");   // (her sound at the touch itself: cued early, it played for souls he passed)
+        for (let i = 0; i < 26; i++){ const a = Math.random()*6.3, v = 40 + Math.random()*120;                       // sparkles off the number
+          barSparks.push({ x: W/2 + (Math.random()-0.5)*70, y: 44 + (Math.random()-0.5)*40, vx: Math.cos(a)*v, vy: Math.sin(a)*v - 30, t: 0, life: 0.6 + Math.random()*0.7, r: 1.5 + Math.random()*2.5 }); } blazeUntil = now + T.blazeTime; burst(so.x, so.y-70, "#CFE6FF", 24);
+        power = Math.min(T.power, power + (boss ? T.soulHealBoss : T.soulHeal)); } }   // (a little more in the fight, where the souls are the only mending)
+    for (const so of souls) if (so.state === "rise"){
+      const u = now - so.t0;
+      so.y -= 240*dt; so.x += (scroll + 45)*dt + 40*Math.sin(u*3)*dt;                         // up, easing a little to the right, with a sway
+      if (u > 0.5 && Math.random() < 0.6) twinkle(so.x + (Math.random()-0.5)*30, so.y - 50 - Math.random()*70, "#DFF1FF", 1, 4);
+      if (!so.gone && u > so.kind.ascend/24 + 0.3){ so.gone = true; twinkle(so.x, so.y - 80, "#FFFFFF", 26, 40); }
+    }
+    /* demons: the blade kills, the body takes the hit */
+    const swordY = hy + 2, swordX0 = hx + 20, swordX1 = hx + 100;
+    for (const d of demons){
+      if (d.dead) continue;
+      const dy = flierY(d, now);
+      const hb = T.hit[d.kind] || [T.demonR, T.demonR];
+      // it has to be ON the blade — except for a lurker, which is not moving: he can cut up or down at
+      // one, and without that reach the band where the blade lined up was 23px, which is no chance at all
+      // and it has to be LEVEL with the blade: a demon under his feet or on his head is not on the sword,
+      // it is stepping on him — that is a body hit and it hurts him (0.7 let a fish half a body below die)
+      const reach = hb[1] * (d.lurk ? 0.9 : 0.45);
+      // and it has to be IN FRONT of him: the overlap test alone let a wide sprite sitting on his head
+      // count as being on the sword, so a flier that stepped on him died for free instead of hurting him
+      const onBlade = d.x > hx + 12 && d.x + hb[0] > swordX0 && d.x - hb[0] < swordX1 && Math.abs(dy - swordY) < reach;
+      // his whole height counts against something closing on him — but a lurker holds station, and a
+      // graze past one that never moved should be forgiven, or the gap it sits in cannot be flown
+      // his BODY, not his wings: the touch zone sits a little forward of his centre and is tighter above and
+      // behind, where the wings are — a demon brushing a wing tip should not hurt him (Jerry, 2026-09-23 night)
+      const bx = hx + 8, ex = hb[0] + 18, ey = hb[1] + (d.lurk ? 20 : 38);
+      // — and his FEET, which hang low and behind: stepping on a demon is a hit too (they missed the body zone — Jerry, 2026-09-26)
+      const ftx = hx - 16*Math.cos(tilt) - 78*Math.sin(tilt), fty = hy - 16*Math.sin(tilt) + 78*Math.cos(tilt);
+      const onFeet  = Math.abs(d.x - ftx) < hb[0] + 14 && Math.abs(dy - fty) < hb[1] + 14;
+      const onBody  = ((d.x-bx)/ex)*((d.x-bx)/ex) + ((dy-hy)/ey)*((dy-hy)/ey) < 1 || onFeet;
+      // a demon that has just hurt him is not then cut in the same breath: knocked off its line by the bump, it could
+      // fall across the blade a frame later and die too — the hurt comes first, and it lives (Jerry, 2026-09-25)
+      const justHurtHim = now - (d.bump || -9) < 0.6;
+      if ((onBlade && !justHurtHim) || (onBody && blaze > 0)){ d.dead = now; slain++; sfx(KILL_SFX[d.kind] || "kill1");
+        const cutX = Math.max(swordX0, Math.min(swordX1, d.x)), cutY = onBlade ? swordY : (dy + hy)/2;
+        burst(cutX, cutY, "#FF6A3A", 34); }                                    // where the blade went in
+      // it does NOT die: it knocks him and flies on. Killing it on contact made every collision read as
+      // a win — the same burst as a blade kill — when what actually happened is that it hurt him.
+      else if (onBody && now - (d.bump || -9) > 1.0){ d.bump = now; M.kb += T.knockback;
+        // away from it, not always upward: in a passage an upward shove threw him into the stone, and
+        // the stone kills outright now — so the hit was not what killed him, the recoil from it was
+        const away = hy < dy ? -1 : 1;
+        M.vy = d.lurk ? (away > 0 ? 40 : -190) : Math.min(M.vy, -180); if (d.lurk && away > 0) softUntil = now + 0.4;   // shoved DOWN: gentler still, and gravity eases for 0.4s so it does not compound (Jerry, 2026-09-26)
+        graceUntil = now + T.grace;                                          // no second demon while he reels (the stone, though, still counts)
+        if (d.ty == null) d.ty = d.y; d.ty -= away*34;                        // and it is thrown off its own line — eased, not teleported: a jump read as the creature bursting
+        hitFlash = 0.35;                                                     // the old quiet flash: the red wash over everything was too much
+        const cx = (hx + d.x)/2, cy = (hy + dy)/2;
+        burst(cx, cy, "#FF3A2A", 14, { v0:40, v1:170, r0:1.0, r1:2.6, l0:0.4, l1:0.8 });   // where the two of them met: a scatter of sparks, tight and brief
+        twinkle(cx, cy, "#FFD9A0", 7, 18);
+        power -= T.demonHit; bleed(); if (power <= 0) withstood("dragged into the dark"); }
+    }
+  }
+  /* the Amalgam: it walks in with the world, then the world holds and it fights */
+  if (boss && !paused && state !== "ready") boss.t += dt;                       // it lives on the death screen too: a frozen clock froze its white flinch
+  if (boss && playing){
+    if (boss.phase === "enter"){ boss.x -= scroll*dt; if (boss.x <= bossStation()){ boss.x = bossStation(); boss.phase = "fight"; cols = []; demons = []; } }
+    // (no more come once the sea is spent — Jerry)
+    else if (boss.phase === "fight" && boss.boxes){
+      const B = boss.boxes, swordY = hy + 2, sx0 = hx + 20, sx1 = hx + 100;
+      const inset = (bb, f) => { const ix = Math.min(30, (bb.x1-bb.x0)*f), iy = Math.min(30, (bb.y1-bb.y0)*f);   // the boxes are square, the pieces are not: come in a little
+        return { x0: bb.x0 + ix, x1: bb.x1 - ix, y0: bb.y0 + iy, y1: bb.y1 - iy }; };
+      // the blade: where it crosses the monster's PAINT it cuts — once every third of a second. The boxes lied:
+      // a piece's box is a rectangle full of air, and a hit on air read as a hit on nothing
+      if (boss.t - boss.hitT > 0.3){ const cx = bossSolidAt(sx0 + 16, swordY - 1, sx1 - sx0 - 16, 3);
+        if (cx !== false){ boss.hp--; boss.hitT = boss.t; boss.hurtT = boss.t; sfx("bosshit");
+          burst(cx, swordY, "#FFE9B0", 14, { v0:120, v1:380, r0:0.8, r1:2.2, l0:0.25, l1:0.5, g:200 });               // sparks off the blade
+          burst(cx + 6, swordY, "#5FBF34", 18, { v0:30, v1:210, r0:2.0, r1:5.5, l0:0.5, l1:1.1, g:520, up:60 });        // and a spatter of green
+          burst(cx + 6, swordY, "#2E7A1E", 8,  { v0:20, v1:120, r0:2.5, r1:6.0, l0:0.6, l1:1.2, g:560, up:40 });
+          if (boss.hp <= 0){ boss.phase = "dying"; boss.dieT = boss.t; sfx("bossdie"); burst(cx, swordY, "#FFFFFF", 60, { v0:80, v1:420 });
+            stopUnder(); playTrack(SND.win, true, WIN_IN, 520); } } }        // the beast has fallen: the victory music, straight into its drums
+      // its claws, its slashing wing, its striking beak: touching him is a hit on HIM
+      if (now > graceUntil && now - boss.ouchT > 1.0){
+        const hurt = BOSS_HURT.slice(); if (boss.lunge > 0.05) hurt.push("vhead", "beak"); if (boss.slash < -0.3) hurt.push("wing_hand");   // the wing only while it is coming down
+        for (const k of hurt){ const bb = B[k]; if (!bb) continue; const q = inset(bb, k === "wing_hand" ? 0.34 : 0.22);
+          if (hx + 20 > q.x0 && hx - 20 < q.x1 && hy + 26 > q.y0 && hy - 26 < q.y1){
+            boss.ouchT = now; M.vx = -380; M.vy = 140; tapAt = now - 5; stunUntil = now + 0.25; graceUntil = now + T.grace; hitFlash = 0.35;   // it drags him DOWN and away, and for a moment he cannot answer
+            burst(hx + 10, hy, "#FF3A2A", 14, { v0:40, v1:170, r0:1.0, r1:2.6, l0:0.4, l1:0.8 }); twinkle(hx, hy, "#FFD9A0", 7, 18);
+            power -= T.bossHit; bleed(); if (power <= 0) withstood("torn apart by the Amalgam");
+            break; } } }
+    }
+    else if (boss.phase === "dying"){
+      if (Math.random() < 0.5) burst(boss.x - 120 + Math.random()*220, boss.y - 150 + Math.random()*300, Math.random() < 0.5 ? "#FF6A3A" : "#FFFFFF", 4, { v0:30, v1:200 });
+      if (boss.t - boss.dieT > 2.8){ boss.phase = "gone"; state = "won"; wonAt = now; verse = nextVerse(); blazeUntil = now + 1e6;
+        for (const so of souls) if (so.state === "wait"){ so.state = "rise"; so.t0 = now + 0.4 + Math.random()*1.2; }   // and every soul still kneeling rises with him
+        twinkle(W/2, H/2, "#FFF6DC", 60, 200); }
+    }
+  }
+  for (const b of bursts){ b.t += dt; b.x += b.vx*dt; b.y += b.vy*dt; b.vy += (b.g==null?300:b.g)*dt; }
+  bursts = bursts.filter(b => b.t < b.life);
+  hitFlash = Math.max(0, hitFlash - dt);
+
+  /* ============================ draw ============================ */
+  g.drawImage(BGS[0], 0, 0);
+  for (let L = 1; L <= depth; L++){                                            // each depth lies over the last; only the newest is still fading in
+    g.save(); g.globalAlpha = L === depth ? wmix : 1; g.drawImage(BGS[L], 0, 0); g.restore(); }
+  drawFar(PANO[depth-1], (1 - wmix) * (PANO_DIM[depth-1] || 1));               // the country you are leaving
+  drawFar(PANO[depth],   wmix       * (PANO_DIM[depth]   || 1));               // and the one coming up
+  if (fireA > 0){ g.save(); g.globalAlpha = fireA; if (fireOK && vids[fireLead].readyState >= 2) paintedFire(); else stillFire(now); g.restore(); }   // (the fire a tenth dimmer too, 2026-09-26)
+  if (fireA > 0){ g.save(); g.globalAlpha = fireA; drawEmbers(now); g.restore(); }
+  drawAsh(now, depth === 1 ? wmix : depth === 2 ? 1 - wmix : 0);            // the ashfall belongs to Depth II alone
+  const veilK = depth === 3 ? wmix : depth === 4 ? 1 - wmix : 0;               // the comb's sky is bright: sink the top of it into the dark
+  if (veilK > 0){
+    const vg = g.createLinearGradient(0, 0, 0, H*0.72);
+    vg.addColorStop(0, `rgba(6,4,8,${VEIL4*veilK})`); vg.addColorStop(0.55, `rgba(8,5,6,${VEIL4*0.51*veilK})`); vg.addColorStop(1, "rgba(10,6,4,0)");
+    g.save(); g.fillStyle = vg; g.fillRect(0,0,W,H); g.restore(); }
+  drawWater(now, depth === 4 ? wmix : depth === 5 ? 1 - wmix : 0);
+  drawIce(now, depth === 5 ? wmix : 0);
+  drawSparks(now, depth === 2 ? wmix : depth === 3 ? 1 - wmix : 0);
+  drawMotes(now, depth === 3 ? wmix : depth === 4 ? 1 - wmix : 0);
+  drawSpores(now, depth === 4 ? wmix : depth === 5 ? 1 - wmix : 0);
+  drawFrost(now, depth === 5 ? wmix : 0);
+  const hazeK = depth === 2 ? wmix : depth === 3 ? 1 - wmix : 0;                  // and it fades out as the comb comes in
+  if (hazeK > 0){                                                                // the furnace haze lying over the plain
+    const hz = g.createLinearGradient(0, H, 0, H*0.34);
+    hz.addColorStop(0, `rgba(255,124,36,${0.17*hazeK})`); hz.addColorStop(0.55, `rgba(255,140,50,${0.07*hazeK})`); hz.addColorStop(1, "rgba(255,150,60,0)");
+    g.save(); g.globalCompositeOperation = "lighter"; g.fillStyle = hz; g.fillRect(0,0,W,H); g.restore(); }
+
+  wg.clearRect(0,0,W,H);
+  if (cready) for (const c of cols) drawPair(c);
+  mg.clearRect(0,0,W,H);
+  for (const d of demons) drawFlier(mg, d);
+  if (boss){ drawBoss(mg, boss); if (boss.phase === "fight" && !(fpsN & 3)){ bsg.clearRect(0,0,W,H); drawBoss(bsg, boss, BOSS_WALL); } }   // and, unseen, its solid parts alone: the wall — only in the fight, every fourth frame (a CPU canvas: dear on a phone)
+  for (const so of souls) if (!so.front) drawSoul(wg, so);
+  const tAmt = (TINT[Math.max(0,depth-1)] ?? 0.52) + ((TINT[depth] ?? 0.52) - (TINT[Math.max(0,depth-1)] ?? 0.52))*wmix;
+  tint(wg, tAmt, now);
+  g.drawImage(world, 0, 0);
+  tint(mg, tAmt * 0.34, now);                                 // the monsters wear the place lightly
+  g.drawImage(mon, 0, 0);
+  for (const so of souls) if (so.front) drawSoul(g, so);        // the three at its toes: over the boss, and they rise over it
+
+  if (ready === ORDER.length){
+    const ang = { wing_far:far, cape, legs, body:0, head, wing_near:near }, off = { head:[0, headY] };
+    hg.clearRect(0,0,W,H);
+    hg.save(); hg.translate(hx, hy); hg.rotate(tilt); hg.scale(FIG.s, FIG.s); hg.translate(-FIG.cx, -FIG.cy);
+    for (const k of ORDER){ const m = META[k], p = PIVOT[k]; hg.save();
+      if (off[k]) hg.translate(off[k][0], off[k][1]);
+      if (p){ hg.translate(p[0],p[1]); hg.rotate(ang[k]); hg.translate(-p[0],-p[1]); }
+      hg.drawImage(img[k], m.x, m.y, m.w, m.h); hg.restore(); }
+    hg.restore();
+    tint(hg, 0.30*(1-0.8*blaze), now);
+    if (hitFlash > 0){ hg.save(); hg.globalCompositeOperation = "source-atop"; hg.fillStyle = `rgba(255,40,30,${hitFlash*1.6})`; hg.fillRect(0,0,W,H); hg.restore(); }
+    if (blaze > 0 && state !== "over"){
+      hg.save(); hg.globalCompositeOperation = "source-atop"; hg.fillStyle = `rgba(255,214,120,${0.45*blaze*(0.8+0.2*Math.sin(now*22))})`; hg.fillRect(0,0,W,H); hg.restore();
+      g.save(); g.shadowColor = "rgba(255,200,90,0.95)"; g.shadowBlur = 40*blaze; g.drawImage(hero, 0, 0); g.restore();
+    }
+    if (now < graceUntil && state === "playing") g.globalAlpha = 0.55 + 0.45*Math.abs(Math.sin(now*28));
+    if (state === "over"){ const k = Math.min(1, (now - dead)/1.4);
+      if (k < 1){ g.save(); g.globalAlpha = 1 - k; g.shadowColor = "rgba(255,230,160,0.9)"; g.shadowBlur = 30 + 60*k; g.drawImage(hero, 0, 0); g.restore(); } }
+    else {
+      if (state === "ready" && lready){                                        // the title first: he flies in front of it
+        const lw = 380, lh = lw*logo.height/logo.width, ly = 70 + 5*Math.sin(now*1.6);
+        const rise = Math.min(3.5, titleBeat), inK = Math.max(0, Math.min(1, (now - titleAt - (titleBeat - rise))/rise));   // dark while the drums build, then it rises and is whole on the great hit
+        g.save(); g.globalCompositeOperation = "lighter"; g.globalAlpha = (0.94 + 0.06*Math.sin(now*2.3)) * inK*inK;
+        g.drawImage(logo, W/2 - lw/2, ly, lw, lh); g.restore();
+      }
+      g.drawImage(hero, 0, 0);
+    }
+    g.globalAlpha = 1;
+  }
+  g.save(); g.globalCompositeOperation = "lighter";
+  for (const b of bursts){
+    const fade = 1 - b.t/b.life, tw = b.tw ? 0.55 + 0.45*Math.sin(b.t*b.tw) : 1;
+    g.globalAlpha = fade*tw; g.fillStyle = b.color; g.beginPath(); g.arc(b.x, b.y, b.r, 0, 7); g.fill();
+    if (b.tw){ g.globalAlpha = fade*tw*0.3; g.fillRect(b.x-b.r*1.6, b.y-0.5, b.r*3.2, 1); g.fillRect(b.x-0.5, b.y-b.r*1.6, 1, b.r*3.2); }   // a little star, not a scratch
+  }
+  g.restore();
+
+  /* ---- HUD ---- */
+  g.save(); g.textAlign = "center"; g.textBaseline = "top";
+  if (state === "playing"){                                                    // the pause mark: two small bars in the corner
+    g.globalAlpha = paused ? 0.9 : 0.35; g.fillStyle = "#F2DFA6"; g.fillRect(18, 18, 5, 18); g.fillRect(28, 18, 5, 18); g.globalAlpha = 1;
+    if (paused){ g.font = "600 17px Cinzel, Georgia, serif"; g.lineWidth = 4; g.strokeStyle = "rgba(0,0,0,0.85)"; g.fillStyle = "#F2DFA6";
+      g.strokeText("PAUSED", W/2, H/2 + 40); g.fillText("PAUSED", W/2, H/2 + 40); } }
+  if (state !== "ready"){
+    const gk = Math.max(0, 1 - (now - scoreGlow)/0.9);                          // a soul was just saved: the number swells and glows, then settles
+    g.save(); g.translate(W/2, 18 + 26); g.scale(1 + 0.16*gk, 1 + 0.16*gk); g.translate(-W/2, -(18 + 26));
+    g.font = "700 52px Cinzel, Georgia, serif"; g.lineWidth = 6; g.strokeStyle = "rgba(0,0,0,0.85)"; g.fillStyle = gk > 0 ? "#FFF4D0" : "#F2DFA6";
+    g.strokeText(pts(), W/2, 18);
+    if (gk > 0){ g.shadowColor = "rgba(255,215,120,0.95)"; g.shadowBlur = 36*gk; g.fillText(pts(), W/2, 18); g.fillText(pts(), W/2, 18); g.shadowBlur = 0; }
+    g.fillText(pts(), W/2, 18); g.restore();
+    g.font = "600 17px Cinzel, Georgia, serif"; g.lineWidth = 4; g.fillStyle = "#F2DFA6";
+    // (the gold is set here on purpose: the number above it is drawn inside a save/restore, so after it the
+    //  colour is whatever the last spark left behind — on the death and victory screens, not gold at all)
+    const line = `SOULS ${saved}     DEMONS ${slain}`; g.strokeText(line, W/2, 76); g.fillText(line, W/2, 76);
+    // the frame rate, kept for the next time the phone feels slow: add ?fps to the address and it shows top-left
+    fpsN++; if (SHOW_FPS){ if (now - fpsAt > 0.5){ fpsShown = Math.round(fpsN/(now - fpsAt)); fpsN = 0; fpsAt = now;
+        if (window.NATIVE_FPS && state === "playing" && (fpsLog++ & 3) === 0) console.log("fps " + fpsShown + (boss ? " boss:" + boss.phase : " depth:" + depth)); }   // and to the app's log, every two seconds
+      g.save(); g.font = "600 12px Cinzel, Georgia, serif"; g.textAlign = "left"; g.fillStyle = "rgba(200,200,200,0.7)"; g.lineWidth = 3; g.strokeText(fpsShown + " fps", 14, 70); g.fillText(fpsShown + " fps", 14, 70); g.restore(); }
+    // power: a thin bar of gold, three lights wide
+    if (shown > power) shown = Math.max(power, shown - 220*dt); else if (shown < power){ shown = Math.min(power, shown + 22*dt);
+      for (let i = 0; i < 2; i++) barSparks.push({ x: W/2 - 90 + 180*shown/T.power + (Math.random()-0.5)*10, y: 104 + (Math.random()-0.5)*8,
+        vx: (Math.random()-0.5)*40, vy: -20 - Math.random()*50, t: 0, life: 0.5 + Math.random()*0.5, r: 1.6 + Math.random()*2.2 }); }
+    if (speed > 1){ g.font = "600 11px Cinzel, Georgia, serif"; g.lineWidth = 3; g.fillStyle = "#C9B98E"; g.globalAlpha = 0.8;
+      g.strokeText("FAST", W/2 + 118, 101); g.fillText("FAST", W/2 + 118, 101); g.globalAlpha = 1; }
+    const bw = 180, bx = W/2 - bw/2, by = 100, pf = Math.max(0, shown)/T.power;
+    g.fillStyle = "rgba(0,0,0,0.55)"; g.fillRect(bx-2, by-2, bw+4, 12);
+    const pg = g.createLinearGradient(bx,0,bx+bw,0); pg.addColorStop(0,"#A87A28"); pg.addColorStop(1,"#F2DFA6");
+    g.fillStyle = pf < 0.34 && Math.sin(now*12) > 0 ? "#FF6A3A" : pg; g.fillRect(bx, by, bw*pf, 8);
+    // (the two pale dividers that split the bar into thirds are gone — Jerry, 2026-09-20)
+    // the wound: the bar's own colour (gold, or the red it turns when he is nearly spent) drips off its receding edge — drops that fall, and specks that sit on the bar and fade (blood-red read as too much: Jerry, 2026-09-23)
+    if (now < bleedUntil) for (let i = 0; i < 2; i++) barBlood.push({ x: bx + bw*pf + (Math.random()-0.5)*6, y: by + 4 + (Math.random()-0.5)*6,
+      vx: (Math.random()-0.5)*90, vy: 10 + Math.random()*70, t: 0, life: 0.7 + Math.random()*0.7, r: 0.7 + Math.random()*1.0, drop: true });
+    if (barBlood.length){ g.save();
+      for (const b of barBlood){ b.t += dt; if (b.drop){ b.vy += 320*dt; b.x += b.vx*dt; b.y += b.vy*dt; } const f = 1 - b.t/b.life;
+        g.globalAlpha = b.drop ? Math.min(1, f*1.6) : 0.85*f; g.fillStyle = pf < 0.34 ? (b.drop ? "#FF6A3A" : "#B0301A") : (b.drop ? "#F2DFA6" : "#A87A28"); g.beginPath(); g.arc(b.x, b.y, b.r*(b.drop ? 0.7 + 0.3*f : 1), 0, 7); g.fill(); }
+      barBlood = barBlood.filter(b => b.t < b.life); g.restore(); }
+    if (barSparks.length){ g.save(); g.globalCompositeOperation = "lighter";               // the mending: sparks off the bar's growing edge
+      for (const b of barSparks){ b.t += dt; b.x += b.vx*dt; b.y += b.vy*dt; const f = 1 - b.t/b.life;
+        g.globalAlpha = f*(0.6 + 0.4*Math.sin(b.t*30)); g.fillStyle = "#FFF6D0"; g.beginPath(); g.arc(b.x, b.y, b.r*(0.6+0.4*f), 0, 7); g.fill(); }
+      barSparks = barSparks.filter(b => b.t < b.life); g.restore(); }
+
+  }
+  if (false && boss && (boss.phase === "fight" || boss.phase === "dying") && state === "playing"){   // the Amalgam's life bar — hidden (Jerry read it as his own); flip `false` to show it
+    const bw = 300, bx = W/2 - bw/2, by = 96, f = Math.max(0, boss.hp/T.bossHP);
+    g.save(); g.fillStyle = "rgba(0,0,0,0.6)"; g.fillRect(bx-2, by-2, bw+4, 10);
+    g.fillStyle = "#B8281E"; g.fillRect(bx, by, bw*f, 6);
+    g.strokeStyle = "rgba(242,223,166,0.45)"; g.lineWidth = 1; g.strokeRect(bx-0.5, by-0.5, bw+1, 7); g.restore(); }
+  if (state === "won"){
+    const k = Math.max(0, Math.min(1, (now - wonAt)/1.2));
+    g.save(); g.textAlign = "center"; g.globalAlpha = k;
+    g.lineWidth = 5; g.strokeStyle = "rgba(0,0,0,0.9)"; g.fillStyle = "#F2DFA6";
+    g.font = "italic 600 34px 'Cormorant Garamond', Georgia, serif"; g.lineWidth = 6;
+    const vw = Math.max(...verse.lines.map(l => g.measureText(l).width)), vs = Math.min(34, 34*450/vw);   // a long line shrinks the whole verse to fit
+    g.font = `italic 600 ${vs.toFixed(1)}px 'Cormorant Garamond', Georgia, serif`;
+    let vy = H*0.40 + 146;                                                       // a different verse greets each victory (VERSES)
+    for (const line of verse.lines){ g.strokeText(line, W/2, vy); g.fillText(line, W/2, vy); vy += vs*1.18; }
+    vy += 12; g.font = "600 17px Cinzel, Georgia, serif"; g.fillStyle = "#C9B58A"; g.lineWidth = 4;
+    g.strokeText(verse.ref, W/2, vy); g.fillText(verse.ref, W/2, vy);
+    if (now - wonAt > 2.5){ g.globalAlpha = Math.min(1, (now - wonAt - 2.5)/0.5) * (0.75 + 0.25*Math.sin(now*3)); g.fillStyle = "#F2DFA6";
+      g.font = "600 22px Cinzel, Georgia, serif"; g.lineWidth = 6; g.strokeText("PLAY AGAIN", W/2, vy + 44); g.fillText("PLAY AGAIN", W/2, vy + 44); }
+    g.restore(); }
+  if (state === "ready"){
+    const wordsK = Math.max(0, Math.min(1, (now - titleAt - titleBeat)/0.8)); g.save(); g.globalAlpha = wordsK;   // the words follow the drum
+    if (lready && !RELEASE){                                                  // Level  1  2  3 — tap a numeral to begin there (not in the shipped app)
+      const n = T.levelAt.length, lab = "Level";
+      g.font = "italic 24px 'Cormorant Garamond', Georgia, serif"; g.lineWidth = 4; g.textAlign = "left";
+      const lw2 = g.measureText(lab).width, total = lw2 + 14 + (n-1)*PICK.gap + 20;
+      const sx = W/2 - total/2;
+      g.fillStyle = "#E8DCC4"; g.strokeText(lab, sx, PICK.y); g.fillText(lab, sx, PICK.y);
+      PICK.x0 = sx + lw2 + 24;
+      g.textAlign = "center"; g.font = "600 24px Cinzel, Georgia, serif";
+      for (let i=0;i<n;i++){ const x = PICK.x0 + i*PICK.gap, on = i === jump && !jumpPre;
+        g.fillStyle = on ? "#F2DFA6" : "#6E6478"; g.globalAlpha = on ? 1 : 0.85;
+        g.strokeText(i+1, x, PICK.y); g.fillText(i+1, x, PICK.y);
+        if (on){ g.globalAlpha = 0.55; g.strokeStyle = "#E8B44C"; g.lineWidth = 1;
+          g.beginPath(); g.moveTo(x-13, PICK.y + 30); g.lineTo(x+13, PICK.y + 30); g.stroke();
+          g.lineWidth = 4; g.strokeStyle = "rgba(0,0,0,0.85)"; }
+        g.globalAlpha = 1; }
+      // and between them, smaller: 1.8, 2.8 ... — start just short of a change, to watch the world turn over (testing)
+      g.font = "italic 15px 'Cormorant Garamond', Georgia, serif"; g.lineWidth = 3;
+      for (let i=0;i<n-1;i++){ const x = PICK.x0 + (i+0.5)*PICK.gap, on = jumpPre && i === jump;
+        g.fillStyle = on ? "#F2DFA6" : "#5A5264"; g.globalAlpha = on ? 1 : 0.8;
+        const lab2 = (i+1) + (i === n-2 ? ".5" : ".8"); g.strokeText(lab2, x, PICK.y + 44); g.fillText(lab2, x, PICK.y + 44);
+        if (i === n-2){ const xb = PICK.x0 + 5.5*PICK.gap, onb = jumpBoss; g.fillStyle = onb ? "#F2DFA6" : "#5A5264"; g.globalAlpha = onb ? 1 : 0.8; g.strokeText("B", xb, PICK.y + 44); g.fillText("B", xb, PICK.y + 44); }
+        if (on){ g.globalAlpha = 0.55; g.strokeStyle = "#E8B44C"; g.lineWidth = 1;
+          g.beginPath(); g.moveTo(x-11, PICK.y + 64); g.lineTo(x+11, PICK.y + 64); g.stroke();
+          g.lineWidth = 3; g.strokeStyle = "rgba(0,0,0,0.85)"; }
+        g.globalAlpha = 1; }
+      g.textAlign = "center"; }
+    // NORMAL | FAST — tap one to pick it (it lights), then tap anywhere to begin; the one he used last starts lit
+    g.font = "600 20px Cinzel, Georgia, serif"; g.lineWidth = 4;
+    const canGo = assetsReady() ? 1 : 0.4;                                        // still loading: the two words wait, dim
+    for (const [lab, dx, on] of [["NORMAL", -SPD.dx, speed === 1], ["FAST", SPD.dx, speed > 1]]){
+      const x = W/2 + dx; g.fillStyle = on ? "#F2DFA6" : "#8A8194"; g.globalAlpha = (on ? 1 : 0.9)*canGo;
+      g.strokeText(lab, x, SPD.y); g.fillText(lab, x, SPD.y);
+      g.globalAlpha = 1; }                                                     // (no underline, no divider between them — Jerry, 2026-09-27)
+    g.font = "700 21px Cinzel, Georgia, serif"; g.lineWidth = 5; g.fillStyle = "#F2DFA6";
+    g.strokeText("KILL DEMONS", W/2, TAG_Y); g.fillText("KILL DEMONS", W/2, TAG_Y);
+    g.strokeText("SAVE SOULS",  W/2, TAG_Y + 26); g.fillText("SAVE SOULS",  W/2, TAG_Y + 26);
+    g.font = "600 15px Cinzel, Georgia, serif"; g.lineWidth = 4;
+    const bl = (best ? "best  " + best : "") + (best && bestFast ? "     " : "") + (bestFast ? "fast  " + bestFast : "");
+    if (bl) { g.strokeText(bl, W/2, TAG_Y + 50); g.fillText(bl, W/2, TAG_Y + 50); }
+
+    if (jump){ g.font = "600 12px Cinzel, Georgia, serif"; g.fillStyle = "#8A8194";
+      g.strokeText("no best is kept below level 1", W/2, 752); g.fillText("no best is kept below level 1", W/2, 752); }
+    // (no "gathering" words for players — Jerry; while the pictures are still coming in, NORMAL | FAST simply sit dim, below)
+    g.globalAlpha = wordsK*0.75; g.font = "600 11px Cinzel, Georgia, serif"; g.fillStyle = "#8A8194"; g.lineWidth = 3;   // the corner: sound (the same size and colour as the church name opposite)
+    g.strokeText(muted ? "SOUND OFF" : "SOUND ON", W - 40, 4); g.fillText(muted ? "SOUND OFF" : "SOUND ON", W - 40, 4);
+    if (NATIVE && chList().length){ const nm = CH.id ? chName() : ""; const lab = "PICK CHURCH";   // a small button, centred under best / fast; the church picked, top left on the SOUND ON line
+      g.textBaseline = "alphabetic"; const tm = g.measureText(lab); g.textBaseline = "top"; const bw = tm.width + 28, bh = 26, bx = W/2 - bw/2, by = CHB.y, r = 13; CHB.x = bx; CHB.w = bw; CHB.h = bh;
+      g.beginPath(); g.moveTo(bx + r, by); g.arcTo(bx + bw, by, bx + bw, by + bh, r); g.arcTo(bx + bw, by + bh, bx, by + bh, r); g.arcTo(bx, by + bh, bx, by, r); g.arcTo(bx, by, bx + bw, by, r); g.closePath();
+      const ga = g.globalAlpha; g.globalAlpha = wordsK;   // the button at full strength (the corner words around it stay soft)
+      g.fillStyle = "rgba(6,3,12,.78)"; g.fill(); g.strokeStyle = "#D8C690"; g.lineWidth = 1.3; g.stroke();
+      g.fillStyle = "#E6D6A4"; g.textBaseline = "alphabetic";   // centred on the letters themselves, not on the font's box
+      g.fillText(lab, W/2, by + bh/2 + (tm.actualBoundingBoxAscent - tm.actualBoundingBoxDescent)/2); g.textBaseline = "top"; g.globalAlpha = ga;
+      if (nm){ const sh = nm.length > 30 ? nm.slice(0, 28) + "..." : nm; g.fillStyle = "#8A8194"; g.strokeStyle = "#000"; g.lineWidth = 3; g.textAlign = "left";
+        g.strokeText(sh, 14, 8); g.fillText(sh, 14, 8); }
+      g.textAlign = "center";
+      if (ADP){ g.font = "600 10px Cinzel, Georgia, serif"; g.fillStyle = "#8A8194"; g.strokeStyle = "#000"; g.lineWidth = 3;   // Europe only: change ad consent
+        g.strokeText("AD PRIVACY", W/2, CHB.y + CHB.h + 12); g.fillText("AD PRIVACY", W/2, CHB.y + CHB.h + 12); }
+      if (!CH.asked && !CH.open && wordsK >= 1){ CH.settle = CH.settle || now; if (now - CH.settle > 1.4) chOpen(true); } }     // the first time the title is up: ask once, after it has settled
+    g.restore();
+  }
+  if (state === "ready"){ const rise = Math.min(3.5, titleBeat), veil = 1 - Math.max(0, Math.min(1, (now - titleAt - (titleBeat - rise))/rise));
+    if (veil > 0){ g.fillStyle = `rgba(0,0,0,${veil})`; g.fillRect(0, 0, W, H); } }   // dark while the drums build; the fire, the angel and the title come up together
+  if (state === "gate"){                                                       // the black before: one tap lets the sound in
+    g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
+    if (gateAt < 0) gateAt = now;
+    const gIn = Math.min(1, (now - gateAt)/1.4), gFade = gIn*gIn*(3 - 2*gIn);   // fades up from black over 1.4 s
+    g.font = "600 21.6px Cinzel, Georgia, serif"; g.lineWidth = 4; g.strokeStyle = "rgba(0,0,0,0.9)"; g.fillStyle = "#C9B58A";
+    g.globalAlpha = gFade*(0.72 + 0.28*Math.sin(now*2.2)); g.strokeText("TAP TO ENTER", W/2, H/2 - 10); g.fillText("TAP TO ENTER", W/2, H/2 - 10); g.globalAlpha = 1;   // it breathes, it never goes out
+  }
+  if (state === "demo"){                                                   // the demo's end card
+    const k = Math.min(1, (now - demoAt)/1.2);
+    g.save(); g.textAlign = "center"; g.fillStyle = `rgba(0,0,0,${0.55*k})`; g.fillRect(0,0,W,H); g.globalAlpha = k;
+    g.lineWidth = 6; g.strokeStyle = "rgba(0,0,0,0.9)"; g.fillStyle = "#F2DFA6"; g.font = "italic 600 34px 'Cormorant Garamond', Georgia, serif";
+    g.strokeText("The demo ends here", W/2, 420); g.fillText("The demo ends here", W/2, 420);
+    g.font = "600 16px Cinzel, Georgia, serif"; g.fillStyle = "#C9B58A"; g.lineWidth = 4;
+    for (const [t, y] of [["FOUR MORE REALMS", 462], ["AND THE FINAL DEMON AWAIT", 486]]){ g.strokeText(t, W/2, y); g.fillText(t, W/2, y); }
+    if (DEMO_STORE){ const bx = W/2 - DEMO_BTN.w/2, by = DEMO_BTN.y - DEMO_BTN.h/2;
+      g.fillStyle = "#E8B44C"; g.beginPath(); if (g.roundRect) g.roundRect(bx, by, DEMO_BTN.w, DEMO_BTN.h, 10); else g.rect(bx, by, DEMO_BTN.w, DEMO_BTN.h); g.fill();
+      g.fillStyle = "#1A1208"; g.font = "700 19px Cinzel, Georgia, serif"; g.fillText(DEMO_LABEL, W/2, DEMO_BTN.y + 7);
+      g.fillStyle = "#C9B58A"; g.font = "600 14px Cinzel, Georgia, serif"; g.strokeText(DEMO_SUB, W/2, DEMO_BTN.y + 52); g.fillText(DEMO_SUB, W/2, DEMO_BTN.y + 52); }
+    else { g.fillStyle = "#F2DFA6"; g.font = "600 18px Cinzel, Georgia, serif";
+      for (const [t, y] of [["COMING TO THE APP STORE", 556], ["NOVEMBER 1", 582]]){ g.strokeText(t, W/2, y); g.fillText(t, W/2, y); } }
+    if (now - demoAt > 2.5){ g.globalAlpha = Math.min(1, (now - demoAt - 2.5)/0.5) * (0.75 + 0.25*Math.sin(now*3)); g.fillStyle = "#F2DFA6"; g.font = "600 20px Cinzel, Georgia, serif";
+      g.strokeText("PLAY AGAIN", W/2, 690); g.fillText("PLAY AGAIN", W/2, 690); }
+    g.restore();
+  }
+  if (state === "over"){
+    const k = Math.max(0, Math.min(1, (now - dead - 1.0)/0.7));
+    g.fillStyle = adPending ? `rgba(0,0,0,${Math.min(1, 0.45 + (now - dead - 1.0)*2)})` : `rgba(0,0,0,${0.45*k})`; g.fillRect(0,0,W,H);   // an ad on its way: the screen goes dark, so closing it shows no leftover game-over
+    if (now - dead > 1.8 && !adPending){
+      g.save(); g.textAlign = "center"; g.textBaseline = "alphabetic"; g.strokeStyle = "rgba(0,0,0,0.9)"; g.fillStyle = "#F2DFA6";
+      const fade = Math.min(1, (now - dead - 1.8)/0.5);
+      g.globalAlpha = fade;                                                     // the verse: steady, above
+      g.font = "italic 600 30px 'Cormorant Garamond', Georgia, serif"; g.lineWidth = 6;
+      const fw = Math.max(...fallVerse.lines.map(l => g.measureText(l).width)), fs = Math.min(30, 30*420/fw);   // a long line shrinks the verse to fit
+      g.font = `italic 600 ${fs.toFixed(1)}px 'Cormorant Garamond', Georgia, serif`;
+      let fy = H/2 - 150 + (3 - fallVerse.lines.length)*fs*0.6;
+      for (const line of fallVerse.lines){ g.strokeText(line, W/2, fy); g.fillText(line, W/2, fy); fy += fs*1.2; }
+      fy += 8; g.font = "600 15px Cinzel, Georgia, serif"; g.fillStyle = "#C9B58A"; g.lineWidth = 4;
+      g.strokeText(fallVerse.ref, W/2, fy); g.fillText(fallVerse.ref, W/2, fy);
+      g.globalAlpha = fade * (0.75 + 0.25*Math.sin(now*3));                     // PLAY AGAIN: a little lower than before, still breathing
+      g.font = "600 26px Cinzel, Georgia, serif"; g.lineWidth = 6; g.fillStyle = "#F2DFA6";
+      g.strokeText("PLAY AGAIN", W/2, H/2 + 40); g.fillText("PLAY AGAIN", W/2, H/2 + 40);
+      g.restore();
+    }
+  }
+  g.restore();
+  requestAnimationFrame(frame);
+}
+reset();
+requestAnimationFrame(frame);
+</script>
