@@ -59,6 +59,12 @@
 
   .contact-box{ background:var(--panel); border:1px solid var(--rule); border-radius:10px; padding:24px; display:flex; flex-direction:column; gap:10px; }
   .contact{ font-family:var(--display); font-weight:700; font-size:20px; letter-spacing:.04em; color:var(--gold-soft); user-select:all; word-break:break-all; }
+ html{ scroll-behavior:smooth; }
+ @media (prefers-reduced-motion: reduce){ html{ scroll-behavior:auto; } }
+ #join{ scroll-margin-top:20px; }
+ .tojoin{ align-self:flex-start; font-family:var(--display); font-weight:600; font-size:15px; letter-spacing:.06em; text-decoration:none; color:var(--ground); background:var(--gold); padding:12px 20px; border-radius:999px; }
+ .tojoin:hover, .tojoin:focus-visible{ background:var(--gold-soft); }
+ .tojoin:focus-visible{ outline:2px solid var(--gold-soft); outline-offset:3px; }
  /* joining really is a sequence, so it is numbered */
  ol.join{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:14px; counter-reset:join; max-width:65ch; }
  ol.join li{ counter-increment:join; display:grid; grid-template-columns:2.2rem minmax(0,1fr); column-gap:6px; row-gap:10px; }
@@ -87,6 +93,7 @@
         <div class="fig"><span class="num">25</span><p>active players is all it takes to become a partner church. The more active players from your church, the bigger your church's share.</p></div>
       </div>
       <p class="lede">Angel Warrior is a free iPhone and iPad game about St. Michael's fight against the dark: the archangel descends into the abyss, cuts down demons and rescues lost souls.</p>
+      <a class="tojoin" href="#join">How to join: 4 simple steps &darr;</a>
     </div>
     <img class="shot" src="victory.jpg" alt="The victory screen: the angel over the sea with the words Well done, good and faithful servant, Matthew 25:23">
   </header>
@@ -104,7 +111,7 @@
 
   <section class="status">
     <strong>Where things stand</strong>
-    <p>Angel Warrior releases on the App Store on November 1, 2026. At launch (v1.0) the game has no ads, so the church share begins with our first update, which adds them. Churches that join now are added to the game's church list for that update, and their members can start playing right away.</p>
+    <p>Angel Warrior releases on the App Store on November 1, 2026. At launch (v1.0) the game has no ads, so the church share begins with our first update, which adds them. Churches that <a href="#join">join now</a> are added to the game's church list for that update, and their members can start playing right away.</p>
   </section>
 
   <section>
@@ -143,7 +150,7 @@
       <li><strong>Quarterly payments, $25 minimum, within 60 days of quarter end.</strong> Smaller amounts roll over to the next quarter. Nothing is lost. Statements show the size of the fund, the total active players of all qualifying churches, your active players and the dollar amount paid.</li>
       <li><strong>Real players only.</strong> Share the game freely, but please never ask members to watch or click ads, and never use extra phones or programs to play. When you share it, say "our church is a partner," not "play to raise money for us." Ad networks catch the latter, don't pay for it, and can shut off earnings for every church.</li>
     </ul>
-    <p>Want the details? Read the <a href="terms.html">Partner Church Program Terms</a>. Nobody signs anything; you join by email.</p>
+    <p>Want the details? Read the <a href="terms.html">Partner Church Program Terms</a>. Nobody signs anything; <a href="#join">you join by email</a>.</p>
   </section>
 
   <section>
@@ -160,7 +167,7 @@
     </dl>
   </section>
 
-  <section class="contact-box">
+  <section class="contact-box" id="join">
     <h2>Bring Angel Warrior to your church</h2>
     <ol class="join">
       <li><span><strong>Email us</strong> at <a href="mailto:angelwarriorapp@gmail.com">angelwarriorapp@gmail.com</a> with your church's name and city, a contact person, and this line:</span>
