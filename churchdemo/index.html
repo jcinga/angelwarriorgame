@@ -724,12 +724,12 @@ function na(msg){ try { window.webkit.messageHandlers.audio.postMessage(msg); } 
 /* ads (1.1, the app only): a full-screen ad a moment after the angel falls, on every third game over — never in a
    player's first four runs, never within two minutes of the last ad, never after a victory. Swift shows it (AdManager).
    It comes 1.3 s after the fall, while the screen dims and before PLAY AGAIN appears, so no tap ever lands on it. */
-const AD = { overs: 0, runs: 0, lastAt: -1e12, minRuns: 4, every: 3, gapMs: 120000 };
+const AD = { overs: 0, runs: 0, lastAt: -1e12, prevAt: -1e12, minRuns: 4, every: 3, gapMs: 120000 };
 let adPending = false;
 function adAfterOver(){ if (!NATIVE) return false; AD.overs++;
   if (AD.runs < AD.minRuns || AD.overs < AD.every || Date.now() - AD.lastAt < AD.gapMs) return false;
-  AD.overs = 0; AD.lastAt = Date.now(); adPending = true; na({ cmd: "ad", key: "show" });
-  setTimeout(() => window.__adClosed(), 90000);   // a safety net: the title comes back even if Swift never answers
+  AD.overs = 0; AD.prevAt = AD.lastAt; AD.lastAt = Date.now(); adPending = true; na({ cmd: "ad", key: "show" });
+  setTimeout(() => { if (adPending) window.__adClosed(); }, 90000);   // a safety net: the title comes back even if Swift never answers (only while that ad is still pending: a later game over must keep its verse)
   return true; }
 /* partner churches (1.1, the app only): a one-time "Playing with a church?" and a MY CHURCH corner on the title.
    The list comes from the website (angelwarriorgame.com/churches.json), so churches are added without an app update;
@@ -773,7 +773,9 @@ if (NATIVE) chLoad();
 function chPing(){ if (NATIVE && CH.id) na({ cmd: "ping", key: CH.id }); }
 
 /* Swift calls this when the ad closes (or when no ad was ready): straight back to the title screen, its music with it */
-window.__adClosed = () => { const was = adPending; adPending = false; if (NATIVE) console.log("adClosed was=" + was + " state=" + state); if (state === "over") reset(); };
+window.__adClosed = (shown) => { const was = adPending; adPending = false;
+  if (shown === false){ AD.lastAt = AD.prevAt; AD.overs = AD.every - 1; if (NATIVE) console.log("ad: none ready, ask again next game over"); return; }   // Google had no ad: not a turn used — the next game over asks again, and this one shows its verse and PLAY AGAIN
+  if (NATIVE) console.log("adClosed was=" + was + " state=" + state); if (state === "over") reset(); };
 class NativeTrack {
   constructor(k, src){ this.k = k; this.file = src.split("?")[0]; this.paused = true; this.ended = false; this.readyState = 4; this.duration = 150; this._t = 0; this._at = 0; this.muted = false; }
   get currentTime(){ return this.paused ? this._t : this._t + (performance.now() - this._at)/1000; }   // its own estimate of where Swift is
@@ -1242,27 +1244,44 @@ const VERSES = [
   { lines: ["Fight the good fight", "of faith"], ref: "1 TIMOTHY 6:12" },
 ];
 /* the words after each fall (1.1, Jerry 2026-10-25): encouragement, in turn, never twice in a row, above PLAY AGAIN */
-const FALL_VERSES = [
+const FALL_VERSES = [   // the King James words and capitals exactly (a verse begun mid-sentence keeps its small letter; LORD is drawn in small capitals by verseLine)
   { lines: ["Though he fall,", "he shall not be", "utterly cast down"], ref: "PSALM 37:24" },
-  { lines: ["A just man falleth", "seven times,", "and riseth up again"], ref: "PROVERBS 24:16" },
-  { lines: ["When I fall,", "I shall arise"], ref: "MICAH 7:8" },
-  { lines: ["The Lord upholdeth", "all that fall"], ref: "PSALM 145:14" },
-  { lines: ["Weeping may endure", "for a night, but joy", "cometh in the morning"], ref: "PSALM 30:5" },
-  { lines: ["His compassions fail not.", "They are new", "every morning"], ref: "LAMENTATIONS 3:22-23" },
+  { lines: ["a just man falleth", "seven times,", "and riseth up again"], ref: "PROVERBS 24:16" },
+  { lines: ["when I fall,", "I shall arise"], ref: "MICAH 7:8" },
+  { lines: ["The LORD upholdeth", "all that fall"], ref: "PSALM 145:14" },
+  { lines: ["weeping may endure", "for a night, but joy", "cometh in the morning"], ref: "PSALM 30:5" },
+  { lines: ["his compassions fail not.", "They are new", "every morning"], ref: "LAMENTATIONS 3:22-23" },
   { lines: ["I will never leave thee,", "nor forsake thee"], ref: "HEBREWS 13:5" },
-  { lines: ["Yet will I", "not forget thee"], ref: "ISAIAH 49:15" },
+  { lines: ["yet will I", "not forget thee"], ref: "ISAIAH 49:15" },
   { lines: ["My grace is", "sufficient for thee"], ref: "2 CORINTHIANS 12:9" },
-  { lines: ["Wait on the Lord:", "be of good courage"], ref: "PSALM 27:14" },
+  { lines: ["Wait on the LORD:", "be of good courage"], ref: "PSALM 27:14" },
   { lines: ["Fight the good fight", "of faith"], ref: "1 TIMOTHY 6:12" },
   { lines: ["I can do all things", "through Christ which", "strengtheneth me"], ref: "PHILIPPIANS 4:13" },
-  { lines: ["Be strong in the Lord,", "and in the power", "of his might"], ref: "EPHESIANS 6:10" },
+  { lines: ["be strong in the Lord,", "and in the power", "of his might"], ref: "EPHESIANS 6:10" },
   { lines: ["Put on the whole", "armour of God"], ref: "EPHESIANS 6:11" },
   { lines: ["Resist the devil,", "and he will flee", "from you"], ref: "JAMES 4:7" },
-  { lines: ["Let us not be weary", "in well doing"], ref: "GALATIANS 6:9" },
+  { lines: ["let us not be weary", "in well doing"], ref: "GALATIANS 6:9" },
   { lines: ["I press toward", "the mark"], ref: "PHILIPPIANS 3:14" },
-  { lines: ["Run with patience", "the race that is", "set before us"], ref: "HEBREWS 12:1" },
+  { lines: ["let us run with patience", "the race that is", "set before us"], ref: "HEBREWS 12:1" },
+  { lines: ["they that wait upon the LORD", "shall renew", "their strength"], ref: "ISAIAH 40:31" },
+  { lines: ["Fear thou not;", "for I am with thee"], ref: "ISAIAH 41:10" },
+  { lines: ["Be strong and", "of a good courage"], ref: "JOSHUA 1:9" },
+  { lines: ["the battle", "is the LORD's"], ref: "1 SAMUEL 17:47" },
+  { lines: ["we are more", "than conquerors"], ref: "ROMANS 8:37" },
+  { lines: ["the joy of the LORD", "is your strength"], ref: "NEHEMIAH 8:10" },
+  { lines: ["greater is he that is in you,", "than he that is", "in the world"], ref: "1 JOHN 4:4" },
+  { lines: ["Thou therefore endure hardness,", "as a good soldier", "of Jesus Christ"], ref: "2 TIMOTHY 2:3" },
+  { lines: ["thanks be to God,", "which giveth us", "the victory"], ref: "1 CORINTHIANS 15:57" },
+  { lines: ["Be not overcome of evil,", "but overcome evil", "with good"], ref: "ROMANS 12:21" },
 ];
 let fallVerse = FALL_VERSES[0];
+/* one line of a verse, centred: LORD in small capitals the way the King James prints it (a full-size L, a smaller ORD) */
+function verseSegs(line, fs){ const big = `italic 600 ${fs.toFixed(1)}px 'Cormorant Garamond', Georgia, serif`, small = `italic 600 ${(fs*0.76).toFixed(1)}px 'Cormorant Garamond', Georgia, serif`;
+  const segs = []; for (const p of line.split(/(LORD)/)){ if (!p) continue; if (p === "LORD") segs.push({ t:"L", f:big }, { t:"ORD", f:small }); else segs.push({ t:p, f:big }); }
+  let w = 0; for (const sg of segs){ g.font = sg.f; sg.w = g.measureText(sg.t).width; w += sg.w; } return { segs, w }; }
+function verseLine(line, x, y, fs){ const { segs, w } = verseSegs(line, fs); g.textAlign = "left";
+  let cx = x - w/2; for (const sg of segs){ g.font = sg.f; g.strokeText(sg.t, cx, y); cx += sg.w; }   // every outline first, then every fill, so no outline cuts into a letter beside it
+  cx = x - w/2;     for (const sg of segs){ g.font = sg.f; g.fillText(sg.t, cx, y); cx += sg.w; } }
 function nextFallVerse(){ let i = 0; try{ i = parseInt(localStorage.getItem("michaelmas.fallverse") || "0", 10) || 0; }catch(e){}
   const v = FALL_VERSES[i % FALL_VERSES.length]; try{ localStorage.setItem("michaelmas.fallverse", String((i + 1) % FALL_VERSES.length)); }catch(e){} return v; }
 let verse = VERSES[0];
@@ -1765,11 +1784,11 @@ function frameBody(ms){
       g.save(); g.textAlign = "center"; g.textBaseline = "alphabetic"; g.strokeStyle = "rgba(0,0,0,0.9)"; g.fillStyle = "#F2DFA6";
       const fade = Math.min(1, (now - dead - 1.8)/0.5);
       g.globalAlpha = fade;                                                     // the verse: steady, above
-      g.font = "italic 600 30px 'Cormorant Garamond', Georgia, serif"; g.lineWidth = 6;
-      const fw = Math.max(...fallVerse.lines.map(l => g.measureText(l).width)), fs = Math.min(30, 30*420/fw);   // a long line shrinks the verse to fit
-      g.font = `italic 600 ${fs.toFixed(1)}px 'Cormorant Garamond', Georgia, serif`;
+      g.lineWidth = 6;
+      const fw = Math.max(...fallVerse.lines.map(l => verseSegs(l, 30).w)), fs = Math.min(30, 30*420/fw);   // a long line shrinks the verse to fit
       let fy = H/2 - 150 + (3 - fallVerse.lines.length)*fs*0.6;
-      for (const line of fallVerse.lines){ g.strokeText(line, W/2, fy); g.fillText(line, W/2, fy); fy += fs*1.2; }
+      for (const line of fallVerse.lines){ verseLine(line, W/2, fy, fs); fy += fs*1.2; }
+      g.textAlign = "center";
       fy += 8; g.font = "600 15px Cinzel, Georgia, serif"; g.fillStyle = "#C9B58A"; g.lineWidth = 4;
       g.strokeText(fallVerse.ref, W/2, fy); g.fillText(fallVerse.ref, W/2, fy);
       g.globalAlpha = fade * (0.75 + 0.25*Math.sin(now*3));                     // PLAY AGAIN: a little lower than before, still breathing
